@@ -12,7 +12,7 @@ from typing import Dict, Optional, Tuple
 @dataclass
 class UniformGridConfig:
     """Configuration for uniform 2.5D grid mapping."""
-    resolution: float = 0.50  # Cell size in meters (> 0)
+    resolution: float = 0.25  # Cell size in meters (> 0), matching adaptive fine resolution baseline
     origin_x: float = 0.0     # Coordinate origin X offset
     origin_y: float = 0.0     # Coordinate origin Y offset
     # Optional ROI bounding box: (min_x, max_x, min_y, max_y, [min_z, max_z])
