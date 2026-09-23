@@ -407,14 +407,15 @@ def test_interpolate_to_full_contract():
 # ============================================================================
 def test_synchronized_label_processing():
     segmenter = SemanticSegmenter(num_points=128)
-    x = np.random.uniform(-15.0, 15.0, size=500).astype(np.float32)
-    y = np.random.uniform(-15.0, 15.0, size=500).astype(np.float32)
-    z = np.random.uniform(-1.5, 1.5, size=500).astype(np.float32)
-    intensity = np.random.uniform(0.1, 0.9, size=500).astype(np.float32)
-    dist_xy = np.sqrt(x**2 + y**2)
-    x[dist_xy < 2.0] += 3.0
+    rng = np.random.default_rng(42)
+    theta = rng.uniform(0, 2 * np.pi, size=500).astype(np.float32)
+    r = rng.uniform(2.0, 15.0, size=500).astype(np.float32)
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+    z = rng.uniform(-1.5, 1.5, size=500).astype(np.float32)
+    intensity = rng.uniform(0.1, 0.9, size=500).astype(np.float32)
     pts = np.column_stack([x, y, z, intensity])
-    labels = np.random.randint(0, 8, size=500, dtype=np.int64)
+    labels = rng.integers(0, 8, size=500, dtype=np.int64)
 
     # Downsampled synchronized processing
     result_down = segmenter.predict_points(pts, labels=labels, frame_id="sync_down", interpolate_to_full=False)

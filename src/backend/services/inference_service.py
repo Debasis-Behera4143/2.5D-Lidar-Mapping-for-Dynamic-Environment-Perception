@@ -216,7 +216,7 @@ class InferenceService:
             "device": str(self.device),
             "predicted_labels": [int(x) for x in preds],
             "confidence_scores": [round(float(x), 4) for x in confs],
-            "points": [[round(float(coord), 4) for coord in pt] for pt in pts[:preview_limit]],
+            "points": [[round(float(coord), 4) for coord in pt] for pt in pts],
             "confidence_information": confidence_info,
             "class_distribution": class_dist,
             "spatial_bounds": spatial_bounds,
