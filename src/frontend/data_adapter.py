@@ -30,6 +30,9 @@ from src.frontend.config import (
 def init_session_state() -> None:
     """Initialize default session state keys if not already present."""
     defaults: Dict[str, Any] = {
+        "data_source": "Simulation",
+        "selected_frame_id": "1248",
+        "sim_frame_index": 1248,
         "selected_sample_id": None,
         "sample_metadata": None,
         "perception_result": None,

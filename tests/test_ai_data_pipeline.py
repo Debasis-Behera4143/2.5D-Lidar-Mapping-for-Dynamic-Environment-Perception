@@ -387,7 +387,7 @@ def test_interpolate_to_full_contract():
     intensity = np.random.uniform(0.1, 0.9, size=800).astype(np.float32)
     # Ensure range >= 2.0m
     dist_xy = np.sqrt(x**2 + y**2)
-    x[dist_xy < 2.0] += 3.0
+    x[dist_xy < 2.0] += 5.0
     pts = np.column_stack([x, y, z, intensity])
 
     result = segmenter.predict_points(pts, frame_id="dense_test", interpolate_to_full=True)

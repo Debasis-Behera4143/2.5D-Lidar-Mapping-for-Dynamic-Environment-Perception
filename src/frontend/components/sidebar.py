@@ -63,39 +63,81 @@ def render_sidebar(
         st.session_state.current_page = selected_page
 
         st.markdown("---")
-        st.markdown("##### LiDAR Sample Frame")
+        st.markdown("##### Perception Data Source")
+        ds_choice = st.radio(
+            "Data Source",
+            ["Simulation", "FastAPI"],
+            index=0 if st.session_state.get("data_source", "Simulation") == "Simulation" else 1,
+            key="sidebar_data_source_radio",
+            label_visibility="collapsed",
+        )
+        st.session_state.data_source = ds_choice
 
-        if len(samples_list) > 0:
-            sample_options = [s["sample_id"] for s in samples_list]
-            selected_idx = 0
-            if st.session_state.selected_sample_id in sample_options:
-                selected_idx = sample_options.index(st.session_state.selected_sample_id)
-
-            chosen_sample_id = st.selectbox(
-                "Select LiDAR Scan",
-                sample_options,
-                index=selected_idx,
-                key="sample_selector",
+        if ds_choice == "Simulation":
+            st.markdown(
+                '<div style="font-size: 0.72rem; color: #38bdf8; margin-bottom: 0.4rem;">'
+                '● <strong>Deterministic Simulation Engine</strong>'
+                '</div>',
+                unsafe_allow_html=True,
             )
-            st.session_state.selected_sample_id = chosen_sample_id
-
-            # Locate sample metadata
-            for s in samples_list:
-                if s["sample_id"] == chosen_sample_id:
-                    st.session_state.sample_metadata = s
-                    break
-
-            meta = st.session_state.sample_metadata
-            if meta:
-                has_labels_str = "Available" if meta.get("has_ground_truth") else "Missing"
-                st.caption(
-                    f"Dataset: **{meta.get('dataset_type')}** | Seq: **{meta.get('sequence_id')}**<br>"
-                    f"Frame: **{meta.get('frame_id')}** | Points: **{meta.get('point_count', 0):,d}**<br>"
-                    f"Ground Truth Labels: **{has_labels_str}**",
-                    unsafe_allow_html=True,
-                )
+            sim_options = ["1248 (Urban Boulevard)", "1249 (Intersection)", "1250 (Overpass)"]
+            cur_frame = st.session_state.get("selected_frame_id", "1248")
+            cur_idx = 0
+            for idx, opt in enumerate(sim_options):
+                if cur_frame in opt:
+                    cur_idx = idx
+            chosen_sim = st.selectbox(
+                "Simulated Scene Frame",
+                sim_options,
+                index=cur_idx,
+                key="sidebar_sim_frame_select",
+            )
+            frame_id = chosen_sim.split()[0]
+            st.session_state.selected_frame_id = frame_id
+            st.session_state.sample_metadata = {
+                "dataset_type": "nuScenes (LiDAR)" if frame_id != "1249" else "SemanticKITTI Demo",
+                "frame_id": frame_id,
+                "point_count": 1284365,
+                "has_ground_truth": True,
+            }
         else:
-            st.warning("No LiDAR samples discovered in dataset directory.")
+            st.markdown(
+                '<div style="font-size: 0.72rem; color: #34d399; margin-bottom: 0.4rem;">'
+                '● <strong>Live FastAPI Backend Client</strong>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            if len(samples_list) > 0:
+                sample_options = [s["sample_id"] for s in samples_list]
+                selected_idx = 0
+                if st.session_state.selected_sample_id in sample_options:
+                    selected_idx = sample_options.index(st.session_state.selected_sample_id)
+
+                chosen_sample_id = st.selectbox(
+                    "Select LiDAR Scan",
+                    sample_options,
+                    index=selected_idx,
+                    key="sample_selector",
+                )
+                st.session_state.selected_sample_id = chosen_sample_id
+
+                # Locate sample metadata
+                for s in samples_list:
+                    if s["sample_id"] == chosen_sample_id:
+                        st.session_state.sample_metadata = s
+                        break
+
+                meta = st.session_state.sample_metadata
+                if meta:
+                    has_labels_str = "Available" if meta.get("has_ground_truth") else "Missing"
+                    st.caption(
+                        f"Dataset: **{meta.get('dataset_type')}** | Seq: **{meta.get('sequence_id')}**<br>"
+                        f"Frame: **{meta.get('frame_id')}** | Points: **{meta.get('point_count', 0):,d}**<br>"
+                        f"Ground Truth Labels: **{has_labels_str}**",
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.warning("No backend samples discovered or backend offline.")
 
         st.markdown("---")
         st.markdown("##### Pipeline Hyperparameters")

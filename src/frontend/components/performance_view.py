@@ -120,10 +120,14 @@ def render_performance_view(
     st.markdown("---")
     st.markdown("#### Spatial Discretization Benchmarks")
 
+    cnt_pts = int(point_count) if isinstance(point_count, (int, float)) else 0
+    cnt_uni = int(uniform_cells) if isinstance(uniform_cells, (int, float)) else 0
+    cnt_ada = int(adaptive_cells) if isinstance(adaptive_cells, (int, float)) else 0
+
     s1, s2, s3 = st.columns(3)
     with s1:
-        st.metric("Total Ingested Points", f"{point_count:,d}")
+        st.metric("Total Ingested Points", f"{cnt_pts:,d}")
     with s2:
-        st.metric("Uniform Grid Occupied Cells", f"{uniform_cells:,d}")
+        st.metric("Uniform Grid Occupied Cells", f"{cnt_uni:,d}")
     with s3:
-        st.metric("Adaptive Grid Occupied Cells", f"{adaptive_cells:,d}")
+        st.metric("Adaptive Grid Occupied Cells", f"{cnt_ada:,d}")
