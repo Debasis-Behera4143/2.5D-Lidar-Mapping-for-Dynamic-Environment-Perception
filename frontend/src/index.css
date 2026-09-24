@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+:root {
+  --bg-dark: #050913;
+  --bg-card: #09101f;
+  --bg-surface: #0d172a;
+  --border-subtle: #172742;
+  --border-highlight: #1e3a5f;
+  --cyan-accent: #00d4ff;
+  --blue-accent: #2563eb;
+  --green-accent: #10b981;
+  --purple-accent: #8b5cf6;
+  --magenta-accent: #d946ef;
+  --yellow-accent: #eab308;
+  --orange-accent: #f97316;
+  --red-accent: #ef4444;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-dark);
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #050913;
+}
+::-webkit-scrollbar-thumb {
+  background: #172742;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+/* Monospace telemetry fonts */
+.mono-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-feature-settings: "tnum";
+}
+
+/* Card glow and subtle borders */
+.workstation-card {
+  background-color: #09101f;
+  border: 1px solid #172742;
+  border-radius: 6px;
+}
+
+.workstation-card:hover {
+  border-color: #1e3a5f;
+}
+
+/* Callout badge leader line */
+.callout-badge {
+  background: rgba(9, 16, 31, 0.92);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+}

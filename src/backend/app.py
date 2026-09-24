@@ -25,11 +25,24 @@ from src.backend.utils.errors import (
     SecurityError,
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title=API_TITLE,
     version=API_VERSION,
     description=API_DESCRIPTION,
 )
+
+# Enable CORS for React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+from src.backend.routes.simulation import router as simulation_router
 
 # Register route modules
 app.include_router(health_router)
@@ -37,6 +50,7 @@ app.include_router(taxonomy_router)
 app.include_router(samples_router)
 app.include_router(inference_router)
 app.include_router(mapping_router)
+app.include_router(simulation_router)
 
 
 @app.get("/", status_code=status.HTTP_200_OK)

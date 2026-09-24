@@ -58,6 +58,13 @@ def start_backend() -> subprocess.Popen:
     return proc
 
 
+def start_react_frontend() -> int:
+    """Launch React + Three.js engineering simulator."""
+    print("[Launcher] Starting React + Three.js LiDAR simulator on http://localhost:3000 ...")
+    cmd = ["npm", "run", "dev"]
+    return subprocess.call(cmd, cwd=str(PROJECT_ROOT / "frontend"), shell=True)
+
+
 def start_frontend() -> int:
     """Launch Streamlit frontend."""
     print("[Launcher] Starting Streamlit engineering dashboard on http://localhost:8501 ...")
@@ -78,7 +85,9 @@ def start_frontend() -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description="LiDAR Mapping Dashboard Launcher")
     parser.add_argument("--backend-only", action="store_true", help="Launch FastAPI backend only")
-    parser.add_argument("--frontend-only", action="store_true", help="Launch Streamlit frontend only")
+    parser.add_argument("--frontend-only", action="store_true", help="Launch frontend only")
+    parser.add_argument("--react", action="store_true", help="Launch React + Three.js simulator")
+    parser.add_argument("--streamlit", action="store_true", help="Launch Streamlit dashboard")
     args = parser.parse_args()
 
     if args.backend_only:
@@ -91,7 +100,23 @@ def main() -> None:
         return
 
     if args.frontend_only:
-        sys.exit(start_frontend())
+        if args.streamlit:
+            sys.exit(start_frontend())
+        sys.exit(start_react_frontend())
+
+    if args.react:
+        backend_proc = None
+        if not is_backend_running():
+            backend_proc = start_backend()
+        else:
+            print("[Launcher] Backend is already running on port 8000.")
+        try:
+            start_react_frontend()
+        finally:
+            if backend_proc is not None:
+                print("[Launcher] Terminating backend subprocess...")
+                backend_proc.terminate()
+        return
 
     # Default: Start backend if not already running, then launch frontend
     backend_proc = None
