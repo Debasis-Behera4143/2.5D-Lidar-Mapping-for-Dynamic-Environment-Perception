@@ -132,6 +132,8 @@ export default function App() {
               annotations={frameData.annotations}
               colorMode={colorMode}
               onToggleColorMode={handleToggleColorMode}
+              isPlaying={isPlaying}
+              dataSource={dataSource}
             />
           </div>
 
