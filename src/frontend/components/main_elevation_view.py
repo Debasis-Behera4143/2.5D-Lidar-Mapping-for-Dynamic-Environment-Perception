@@ -35,6 +35,7 @@ def create_main_elevation_figure(
     show_annotations: bool = True,
     show_grid_overlay: bool = True,
     view_angle: str = "Driver Perspective",
+    color_mode: str = "Semantic Class",
 ) -> go.Figure:
     """
     Construct high-fidelity 3D Plotly visualization matching the reference image.
@@ -74,6 +75,28 @@ def create_main_elevation_figure(
         for px, py, pz, cname, conf in zip(x, y, z, class_names, confs)
     ]
 
+    # Configure marker based on color mode
+    if color_mode == "Elevation (Height)":
+        marker_cfg = dict(
+            size=2.8,
+            color=z,
+            colorscale="Turbo",
+            opacity=0.88,
+            colorbar=dict(
+                title=dict(text="Height Z (m)", font=dict(color="#ffffff", size=10)),
+                thickness=10,
+                len=0.7,
+                tickfont=dict(color="#94a3b8", size=9),
+                x=1.02,
+            ),
+        )
+    else:
+        marker_cfg = dict(
+            size=2.8,
+            color=colors,
+            opacity=0.88,
+        )
+
     # Draw Point Cloud Trace
     fig.add_trace(
         go.Scatter3d(
@@ -81,11 +104,7 @@ def create_main_elevation_figure(
             y=y,
             z=z,
             mode="markers",
-            marker=dict(
-                size=2.8,
-                color=colors,
-                opacity=0.88,
-            ),
+            marker=marker_cfg,
             text=hover_texts,
             hoverinfo="text",
             name="LiDAR Points",
@@ -332,7 +351,7 @@ def render_main_elevation_view(
     )
 
     # Sub-controls bar
-    ctrl_c1, ctrl_c2, ctrl_c3 = st.columns([2, 1, 1])
+    ctrl_c1, ctrl_c2, ctrl_c3, ctrl_c4 = st.columns([1.8, 1.6, 1.0, 1.0])
     with ctrl_c1:
         view_opt = st.selectbox(
             "Perspective View",
@@ -342,9 +361,17 @@ def render_main_elevation_view(
             label_visibility="collapsed",
         )
     with ctrl_c2:
-        show_ann = st.checkbox("Annotations", value=True, key="main_3d_show_ann")
+        color_opt = st.selectbox(
+            "Color Points By",
+            ["Semantic Class", "Elevation (Height)"],
+            index=0,
+            key="main_3d_color_mode",
+            label_visibility="collapsed",
+        )
     with ctrl_c3:
-        show_grd = st.checkbox("Grid Wireframe", value=True, key="main_3d_show_grid")
+        show_grd = st.checkbox("Grid Overlay", value=True, key="main_3d_show_grid")
+    with ctrl_c4:
+        show_ann = st.checkbox("Callouts", value=True, key="main_3d_show_ann")
 
     fig = create_main_elevation_figure(
         perception_data=perception_data,
@@ -352,6 +379,7 @@ def render_main_elevation_view(
         show_annotations=show_ann,
         show_grid_overlay=show_grd,
         view_angle=view_opt,
+        color_mode=color_opt,
     )
 
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})

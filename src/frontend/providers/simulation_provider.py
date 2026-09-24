@@ -248,7 +248,7 @@ class SimulationDataProvider(BaseDataProvider):
         # Calculate class distribution
         class_dist: Dict[str, int] = {}
         for lbl in labels_list:
-            name = DISPLAY_CLASS_NAMES.get(lbl, CLASS_NAMES.get(lbl, f"class_{lbl}"))
+            name = CLASS_NAMES.get(lbl, f"class_{lbl}")
             class_dist[name] = class_dist.get(name, 0) + 1
 
         # Annotations exactly matching reference image

@@ -60,14 +60,12 @@ CLASS_NAMES.update({7: "terrain", 8: "barrier", 9: "other"})
 DISPLAY_CLASS_COLORS: Dict[int, str] = {item["id"]: item["color"] for item in DISPLAY_TAXONOMY}
 DISPLAY_CLASS_NAMES: Dict[int, str] = {item["id"]: item["name"] for item in DISPLAY_TAXONOMY}
 
-# Navigation Pages
+# Core Navigation Pages (Consolidated to essential research workflows)
 PAGES = [
     "Dashboard",
     "Point Cloud Viewer",
     "2.5D Mapping",
-    "Semantic View",
-    "Terrain Analysis",
-    "Object Analysis",
+    "Semantic Analysis",
     "Performance",
     "Settings",
 ]

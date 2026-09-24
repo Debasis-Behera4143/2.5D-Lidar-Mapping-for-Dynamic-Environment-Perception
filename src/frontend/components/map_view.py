@@ -146,6 +146,92 @@ def create_2d_grid_figure(
     return fig
 
 
+def create_elevation_profile_chart(
+    points_or_cells: np.ndarray,
+    is_cells: bool = False,
+) -> go.Figure:
+    """
+    Construct Longitudinal Elevation Profile chart (Height vs Distance along forward path).
+    """
+    fig = go.Figure()
+
+    if len(points_or_cells) == 0:
+        fig.update_layout(
+            template=get_dark_plotly_template(),
+            annotations=[
+                dict(
+                    text="No spatial elevation data available.",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, showarrow=False,
+                    font=dict(size=14, color="#64748b"),
+                )
+            ],
+            height=280,
+        )
+        return fig
+
+    if is_cells:
+        x = points_or_cells[:, 0]
+        z = points_or_cells[:, 1]
+    else:
+        x = points_or_cells[:, 0]
+        z = points_or_cells[:, 2]
+
+    forward_mask = (x >= 0) & (x <= 80)
+    fx = x[forward_mask]
+    fz = z[forward_mask]
+
+    if len(fx) == 0:
+        fx = x
+        fz = z
+
+    bins = np.linspace(0, max(10.0, float(np.max(fx))), num=50)
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    indices = np.digitize(fx, bins) - 1
+
+    profile_z = []
+    min_z = []
+    max_z = []
+
+    for i in range(len(bin_centers)):
+        slice_mask = (indices == i)
+        if np.any(slice_mask):
+            profile_z.append(float(np.mean(fz[slice_mask])))
+            min_z.append(float(np.min(fz[slice_mask])))
+            max_z.append(float(np.max(fz[slice_mask])))
+        else:
+            prev = profile_z[-1] if len(profile_z) > 0 else 0.0
+            profile_z.append(prev)
+            min_z.append(prev)
+            max_z.append(prev)
+
+    fig.add_trace(
+        go.Scatter(
+            x=bin_centers,
+            y=profile_z,
+            mode="lines",
+            line=dict(color="#00d4ff", width=2.5),
+            fill="tozeroy",
+            fillcolor="rgba(0, 212, 255, 0.15)",
+            name="Mean Elevation (Z)",
+            hoverinfo="x+y",
+        )
+    )
+
+    template = get_dark_plotly_template()
+    fig.update_layout(
+        template=template,
+        paper_bgcolor="#0d172a",
+        plot_bgcolor="#0d172a",
+        xaxis=dict(title="Forward Distance X (m)", zeroline=True, zerolinecolor="#1e293b"),
+        yaxis=dict(title="Elevation Height Z (m)", zeroline=True, zerolinecolor="#1e293b"),
+        margin=dict(l=30, r=20, t=20, b=30),
+        height=260,
+        showlegend=False,
+    )
+    return fig
+
+
 def render_map_view(
     map_dict: Dict[str, Any],
     title: str = "Adaptive Variable-Resolution 2.5D Map",

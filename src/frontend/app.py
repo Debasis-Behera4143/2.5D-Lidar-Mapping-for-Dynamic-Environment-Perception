@@ -2,50 +2,51 @@
 Adaptive Variable-Resolution 2.5D LiDAR Mapping Engineering Workstation.
 
 Main frontend entrypoint integrating:
-- Dashboard: Full-screen executive perception workstation matching reference design
-- Point Cloud Viewer: Interactive 3D LiDAR point cloud inspection
-- 2.5D Mapping: Coarse-to-fine variable-resolution grid maps
-- Semantic View: 8/10-class taxonomy & confidence distribution
-- Terrain Analysis: Longitudinal elevation profiles & statistics
-- Object Analysis: Semantic point counts vs candidate spatial clusters
-- Performance: Empirical benchmarking & circular gauge indicators
-- Settings & Diagnostics: Backend health, API switcher & checkpoint inspector
+- Dashboard: Executive perception workstation with 3D elevation map and adaptive grid benchmark
+- Point Cloud Viewer: Interactive 3D LiDAR point cloud inspection with spatial bounds
+- 2.5D Mapping: Coarse-to-fine variable-resolution quadtree grid maps & elevation profiles
+- Semantic Analysis: Canonical 8-class taxonomy, point-wise distribution & confidence scoring
+- Performance: Hardware-measured pipeline latencies, throughput FPS & cell reduction benchmarks
+- Settings: Backend service connectivity, sample selector, and hyperparameter configuration
 """
 
 import time
 from typing import Any, Dict
+import numpy as np
 import pandas as pd
 import streamlit as st
 
 # Configure page settings
 st.set_page_config(
-    page_title="Semantic 2.5D Elevation Map Workstation",
+    page_title="Adaptive 2.5D LiDAR Mapping Workstation",
     page_icon="📡",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
 from src.frontend.api_client import ApiClient
-from src.frontend.components.comparison_view import render_comparison_view
+from src.frontend.components.comparison_view import (
+    render_comparison_view,
+    render_dashboard_comparison_strip,
+)
 from src.frontend.components.footer import render_footer_strip
 from src.frontend.components.header import render_header
-from src.frontend.components.lower_analysis_views import render_lower_analysis_views
 from src.frontend.components.main_elevation_view import render_main_elevation_view
-from src.frontend.components.map_view import create_2d_grid_figure, render_map_view
-from src.frontend.components.metric_cards import render_circular_metric, render_metric_card
-from src.frontend.components.middle_views import render_middle_subviews
-from src.frontend.components.object_view import render_object_view
+from src.frontend.components.map_view import (
+    create_2d_grid_figure,
+    create_elevation_profile_chart,
+    render_map_view,
+)
 from src.frontend.components.performance_view import render_performance_view
-from src.frontend.components.pointcloud_view import create_pointcloud_figure, render_pointcloud_view
+from src.frontend.components.pointcloud_view import render_pointcloud_view
 from src.frontend.components.right_side_panels import render_right_column_panels
 from src.frontend.components.scene_overview_panel import render_scene_overview_panel
-from src.frontend.components.semantic_view import render_semantic_legend_panel, render_semantic_view
+from src.frontend.components.semantic_view import render_semantic_view
 from src.frontend.components.sidebar import render_sidebar
-from src.frontend.components.terrain_view import create_elevation_profile_chart, render_terrain_view
 from src.frontend.config import BACKEND_API_URL
 from src.frontend.data_adapter import add_system_log, init_session_state
 from src.frontend.providers import FastAPIDataProvider, SimulationDataProvider
-from src.frontend.styles import apply_custom_styles, get_dark_plotly_template
+from src.frontend.styles import apply_custom_styles
 
 
 def main() -> None:
@@ -174,19 +175,15 @@ def main() -> None:
         on_run_full_pipeline=handle_run_full_pipeline,
     )
 
-    # 6. Route to Active Page View
+    # 6. Route to Active Page View (Strictly 6 core pages)
     if current_page == "Dashboard":
         render_dashboard_page(provider=provider, is_simulation=is_simulation)
     elif current_page == "Point Cloud Viewer":
         render_pointcloud_page(provider=provider)
     elif current_page == "2.5D Mapping":
         render_mapping_page(provider=provider)
-    elif current_page == "Semantic View":
+    elif current_page == "Semantic Analysis":
         render_semantic_page(provider=provider)
-    elif current_page == "Terrain Analysis":
-        render_terrain_page(provider=provider)
-    elif current_page == "Object Analysis":
-        render_object_page(provider=provider)
     elif current_page == "Performance":
         render_perf_page(provider=provider)
     elif current_page == "Settings":
@@ -199,14 +196,13 @@ def main() -> None:
 
 def render_dashboard_page(provider: Any, is_simulation: bool) -> None:
     """
-    Main Executive LiDAR Perception Workstation matching the reference image.
-    High-density layout communicating:
-    - Left column: Scene Overview pipeline stages (Thumbnail -> Segmentation -> Mapping)
-    - Center column: 2.5D Semantic Elevation Map (Top View + Height) with 3D grid and callout badges
-    - Right column: Semantic Legend (10 classes), Object Detection counts, Adaptive Grid Resolution bands
-    - Middle row: 2.5D Elevation Map Side/Front View + Semantic Map Top View
-    - Lower row: Elevation Profile Front View + Circular KPI rings + Terminal Logs + Grid Comparison
-    - Footer row: Summary status strip
+    Main Executive LiDAR Perception Workstation.
+    Focused, single-screen layout communicating:
+    - Left column: Perception & Mapping Pipeline (5 research stages)
+    - Center column: 2.5D Semantic Elevation Map with Driver, BEV, and Side presets
+    - Right column: Semantic Taxonomy & Inferred Point Distribution + Resolution Bands
+    - Bottom section: Direct Quantitative Benchmark (Uniform vs Adaptive Variable Grid)
+    - Footer strip: Semantic properties & resolution reference
     """
     frame_id = st.session_state.get("selected_frame_id", "1248")
 
@@ -221,10 +217,6 @@ def render_dashboard_page(provider: Any, is_simulation: bool) -> None:
     )
     uni_map = provider.get_uniform_map(perc, resolution=st.session_state.fine_resolution)
     comp_data = provider.get_map_comparison(uni_map, ada_map)
-    elev_prof = provider.get_elevation_profile(frame_id)
-    perf_metrics = provider.get_performance_metrics(frame_id)
-    system_logs = provider.get_system_logs(frame_id)
-    scene_objects = provider.get_scene_objects(frame_id)
 
     # Keep session state populated for other pages
     st.session_state.perception_result = perc
@@ -232,9 +224,7 @@ def render_dashboard_page(provider: Any, is_simulation: bool) -> None:
     st.session_state.uniform_map_result = uni_map
     st.session_state.comparison_result = comp_data
 
-    # ==========================================
     # ROW 1: PRIMARY 3-COLUMN WORKSTATION VIEW
-    # ==========================================
     col_left, col_center, col_right = st.columns([1.8, 6.8, 2.7])
 
     with col_left:
@@ -244,31 +234,23 @@ def render_dashboard_page(provider: Any, is_simulation: bool) -> None:
         render_main_elevation_view(perc, ada_map)
 
     with col_right:
-        render_right_column_panels(scene_objects, is_simulation=is_simulation)
+        render_right_column_panels(perc, is_simulation=is_simulation)
 
-    # ==========================================
-    # ROW 2: SUB-VIEWPORT PERCEPTION MAPS
-    # ==========================================
-    render_middle_subviews(perc)
-
-    # ==========================================
-    # ROW 3: ANALYSIS, METRICS, LOGS & COMPARISON
-    # ==========================================
-    render_lower_analysis_views(
-        elevation_profile=elev_prof,
-        performance_metrics=perf_metrics,
-        system_logs=system_logs,
-        comparison_data=comp_data,
+    # ROW 2: CORE RESEARCH BENCHMARK (UNIFORM VS ADAPTIVE GRID)
+    render_dashboard_comparison_strip(
+        uniform_map=uni_map,
+        adaptive_map=ada_map,
+        comparison_metrics=comp_data,
     )
 
-    # ==========================================
-    # ROW 4: FOOTER STATUS STRIP
-    # ==========================================
+    # ROW 3: FOOTER STATUS STRIP
     render_footer_strip()
 
 
 def render_pointcloud_page(provider: Any):
     st.markdown("### 3D LiDAR Point Cloud Inspection")
+    st.markdown("Interactive point cloud viewer with spatial filtering, intensity inspection, and coordinate bounds.")
+
     frame_id = st.session_state.get("selected_frame_id", "1248")
     perc = st.session_state.perception_result or provider.get_perception_data(frame_id)
 
@@ -304,7 +286,8 @@ def render_mapping_page(provider: Any):
     )
 
     frame_id = st.session_state.get("selected_frame_id", "1248")
-    ada_map = st.session_state.adaptive_map_result or provider.get_adaptive_map(provider.get_perception_data(frame_id))
+    perc = st.session_state.perception_result or provider.get_perception_data(frame_id)
+    ada_map = st.session_state.adaptive_map_result or provider.get_adaptive_map(perc)
 
     c1, c2 = st.columns([8, 2])
     with c2:
@@ -333,24 +316,18 @@ def render_mapping_page(provider: Any):
         with m4:
             st.metric("Subdivision Ratio", f"{(fine_cnt / max(1, len(cells))) * 100:.1f}%")
 
+    st.markdown("---")
+    st.markdown("#### Longitudinal Elevation Profile (Height Z vs Forward Distance X)")
+    pts = np.asarray(perc.get("points", []))
+    if len(pts) > 0:
+        fig_elev = create_elevation_profile_chart(pts, is_cells=False)
+        st.plotly_chart(fig_elev, use_container_width=True, config={"displayModeBar": False})
+
 
 def render_semantic_page(provider: Any):
     frame_id = st.session_state.get("selected_frame_id", "1248")
     perc = st.session_state.perception_result or provider.get_perception_data(frame_id)
     render_semantic_view(perc)
-
-
-def render_terrain_page(provider: Any):
-    frame_id = st.session_state.get("selected_frame_id", "1248")
-    perc = st.session_state.perception_result or provider.get_perception_data(frame_id)
-    ada_map = st.session_state.adaptive_map_result or provider.get_adaptive_map(perc)
-    render_terrain_view(perc, ada_map)
-
-
-def render_object_page(provider: Any):
-    frame_id = st.session_state.get("selected_frame_id", "1248")
-    perc = st.session_state.perception_result or provider.get_perception_data(frame_id)
-    render_object_view(perc)
 
 
 def render_perf_page(provider: Any):
