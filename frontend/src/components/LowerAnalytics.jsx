@@ -40,9 +40,9 @@ export default function LowerAnalytics({
   const circumference = 2 * Math.PI * 26; // r = 26
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 w-full">
-      {/* 1. Performance Metrics (4 Columns) */}
-      <div className="md:col-span-5 bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 w-full">
+      {/* 1. Performance Metrics (5 Columns on Desktop) */}
+      <div className="lg:col-span-5 bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
         <div className="flex items-center justify-between text-xs font-bold text-white mb-2 pb-1 border-b border-[#172742]">
           <div className="flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-[#00d4ff]" />
@@ -53,7 +53,7 @@ export default function LowerAnalytics({
           </span>
         </div>
 
-        <div className="grid grid-cols-4 gap-2 h-full items-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 h-full items-center">
           {kpis.map((kpi) => {
             const offset = circumference * (1 - Math.max(0, Math.min(1, kpi.pct / 100)));
             return (
@@ -93,8 +93,8 @@ export default function LowerAnalytics({
         </div>
       </div>
 
-      {/* 2. System Logs (3 Columns) */}
-      <div className="md:col-span-3 bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
+      {/* 2. System Logs (3 Columns on Desktop) */}
+      <div className="lg:col-span-3 bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
         <div className="flex items-center justify-between text-xs font-bold text-white mb-1.5 pb-1 border-b border-[#172742]">
           <div className="flex items-center gap-1.5">
             <Terminal className="w-3.5 h-3.5 text-[#a855f7]" />
@@ -113,8 +113,8 @@ export default function LowerAnalytics({
         </div>
       </div>
 
-      {/* 3. Grid Comparison (4 Columns) */}
-      <div className="md:col-span-4 bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
+      {/* 3. Grid Comparison (4 Columns on Desktop) */}
+      <div className="lg:col-span-4 bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
         <div className="flex items-center justify-between text-xs font-bold text-white mb-1.5 pb-1 border-b border-[#172742]">
           <div className="flex items-center gap-1.5">
             <Grid3X3 className="w-3.5 h-3.5 text-[#00d4ff]" />
@@ -131,25 +131,30 @@ export default function LowerAnalytics({
             <span className="text-[10px] font-semibold text-[#94a3b8] mb-1">Uniform Grid (5 cm)</span>
             <div className="w-full h-[66px] bg-[#050913] rounded border border-[#1e293b] flex items-center justify-center relative overflow-hidden">
               <canvas
-                width={160}
+                width={180}
                 height={66}
                 className="w-full h-full object-cover"
                 ref={(canvas) => {
                   if (!canvas) return;
+                  const w = canvas.parentElement?.clientWidth || 180;
+                  if (canvas.width !== w) canvas.width = w;
+
                   const ctx = canvas.getContext('2d');
                   ctx.fillStyle = '#050913';
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                  const cx = Math.floor(canvas.width / 2);
 
                   // Base terrain and road
                   ctx.fillStyle = 'rgba(249, 115, 22, 0.25)';
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
                   ctx.fillStyle = '#1e3a8a';
                   ctx.fillRect(0, 22, canvas.width, 22);
-                  ctx.fillRect(70, 0, 20, canvas.height);
+                  ctx.fillRect(cx - 10, 0, 20, canvas.height);
 
                   // Vehicle marker
                   ctx.fillStyle = '#d946ef';
-                  ctx.fillRect(74, 30, 8, 10);
+                  ctx.fillRect(cx - 4, 30, 8, 10);
 
                   // Uniform fine grid across entirety
                   ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
@@ -180,25 +185,30 @@ export default function LowerAnalytics({
             <span className="text-[10px] font-semibold text-[#00d4ff] mb-1">Adaptive Grid</span>
             <div className="w-full h-[66px] bg-[#050913] rounded border border-[#00d4ff]/40 flex items-center justify-center relative overflow-hidden">
               <canvas
-                width={160}
+                width={180}
                 height={66}
                 className="w-full h-full object-cover"
                 ref={(canvas) => {
                   if (!canvas) return;
+                  const w = canvas.parentElement?.clientWidth || 180;
+                  if (canvas.width !== w) canvas.width = w;
+
                   const ctx = canvas.getContext('2d');
                   ctx.fillStyle = '#050913';
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                  const cx = Math.floor(canvas.width / 2);
 
                   // Base terrain and road
                   ctx.fillStyle = 'rgba(249, 115, 22, 0.25)';
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
                   ctx.fillStyle = '#1e3a8a';
                   ctx.fillRect(0, 22, canvas.width, 22);
-                  ctx.fillRect(70, 0, 20, canvas.height);
+                  ctx.fillRect(cx - 10, 0, 20, canvas.height);
 
                   // Vehicle marker
                   ctx.fillStyle = '#d946ef';
-                  ctx.fillRect(74, 30, 8, 10);
+                  ctx.fillRect(cx - 4, 30, 8, 10);
 
                   // 1. Coarse grid on periphery (step = 20)
                   ctx.strokeStyle = 'rgba(249, 115, 22, 0.45)';
@@ -219,7 +229,7 @@ export default function LowerAnalytics({
                   // 2. Mid grid on road corridors (step = 10)
                   ctx.strokeStyle = 'rgba(168, 85, 247, 0.55)';
                   ctx.lineWidth = 0.6;
-                  for (let x = 40; x <= 120; x += 10) {
+                  for (let x = Math.max(0, cx - 40); x <= Math.min(canvas.width, cx + 40); x += 10) {
                     ctx.beginPath();
                     ctx.moveTo(x, 10);
                     ctx.lineTo(x, 56);
@@ -229,7 +239,7 @@ export default function LowerAnalytics({
                   // 3. Fine grid on vehicle & obstacle zone (step = 5)
                   ctx.strokeStyle = 'rgba(0, 212, 255, 0.8)';
                   ctx.lineWidth = 0.6;
-                  for (let x = 60; x <= 100; x += 5) {
+                  for (let x = cx - 20; x <= cx + 20; x += 5) {
                     ctx.beginPath();
                     ctx.moveTo(x, 20);
                     ctx.lineTo(x, 46);
@@ -237,8 +247,8 @@ export default function LowerAnalytics({
                   }
                   for (let y = 20; y <= 46; y += 5) {
                     ctx.beginPath();
-                    ctx.moveTo(60, y);
-                    ctx.lineTo(100, y);
+                    ctx.moveTo(cx - 20, y);
+                    ctx.lineTo(cx + 20, y);
                     ctx.stroke();
                   }
                 }}

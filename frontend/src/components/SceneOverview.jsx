@@ -9,7 +9,7 @@ export default function SceneOverview({ points = [] }) {
     const container = mountRef.current;
     if (!container) return;
 
-    const width = container.clientWidth || 180;
+    let width = container.clientWidth || 180;
     const height = 120;
 
     const scene = new THREE.Scene();
@@ -21,7 +21,8 @@ export default function SceneOverview({ points = [] }) {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.domElement.style.touchAction = 'none';
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
@@ -70,18 +71,21 @@ export default function SceneOverview({ points = [] }) {
     };
     animate();
 
-    const handleResize = () => {
-      if (!container) return;
-      const w = container.clientWidth;
-      camera.aspect = w / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, height);
-    };
-    window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        width = entry.contentRect.width;
+        if (width > 0) {
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+          renderer.setSize(width, height);
+        }
+      }
+    });
+    ro.observe(container);
 
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
       renderer.dispose();
       geometry.dispose();
       material.dispose();
@@ -92,28 +96,28 @@ export default function SceneOverview({ points = [] }) {
   }, [points]);
 
   return (
-    <div className="flex flex-col gap-2 w-full">
+    <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-2 w-full">
       {/* 1. Scene Overview Card */}
-      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 shadow-md">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
-          <Layers className="w-3.5 h-3.5 text-[#00d4ff]" />
-          <span>Scene Overview</span>
+      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 shadow-md flex flex-col justify-between">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
+            <Layers className="w-3.5 h-3.5 text-[#00d4ff]" />
+            <span>Scene Overview</span>
+          </div>
+          <div ref={mountRef} className="w-full h-[120px] rounded bg-[#050913] border border-[#132035] overflow-hidden" />
         </div>
-        <div ref={mountRef} className="w-full h-[120px] rounded bg-[#050913] border border-[#132035] overflow-hidden" />
         <div className="text-[10px] text-[#94a3b8] text-center mt-1.5 font-medium">
           Raw LiDAR Point Cloud (3D)
         </div>
       </div>
 
-      <div className="text-center text-[#38bdf8] text-xs font-bold -my-1">↓</div>
-
       {/* 2. AI Semantic Segmentation Card */}
-      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 shadow-md">
+      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 shadow-md flex flex-col justify-between">
         <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
           <Cpu className="w-3.5 h-3.5 text-[#3b82f6]" />
           <span>AI Semantic Segmentation</span>
         </div>
-        <div className="space-y-1 text-[11px] text-[#cbd5e1]">
+        <div className="space-y-1.5 text-[11px] text-[#cbd5e1] my-auto py-2">
           <div className="flex items-center gap-1.5">
             <span className="text-emerald-400 font-bold">✓</span>
             <span>Terrain classification</span>
@@ -127,17 +131,18 @@ export default function SceneOverview({ points = [] }) {
             <span>Semantic labels</span>
           </div>
         </div>
+        <div className="text-[10px] text-[#38bdf8] text-center font-medium bg-[#0d172a] py-0.5 rounded border border-[#1e293b]">
+          RandLA-Net Backbone
+        </div>
       </div>
 
-      <div className="text-center text-[#38bdf8] text-xs font-bold -my-1">↓</div>
-
       {/* 3. Adaptive Grid + 2.5D Mapping Card */}
-      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 shadow-md">
+      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 shadow-md flex flex-col justify-between">
         <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
           <Grid className="w-3.5 h-3.5 text-[#10b981]" />
           <span>Adaptive Grid + 2.5D Mapping</span>
         </div>
-        <div className="space-y-1 text-[11px] text-[#cbd5e1]">
+        <div className="space-y-1.5 text-[11px] text-[#cbd5e1] my-auto py-2">
           <div className="flex items-center gap-1.5">
             <span className="text-emerald-400 font-bold">✓</span>
             <span>Variable resolution</span>
@@ -150,6 +155,9 @@ export default function SceneOverview({ points = [] }) {
             <span className="text-emerald-400 font-bold">✓</span>
             <span>Semantic layers</span>
           </div>
+        </div>
+        <div className="text-[10px] text-[#10b981] text-center font-medium bg-[#0d172a] py-0.5 rounded border border-[#1e293b]">
+          Octree / Quadtree Fusion
         </div>
       </div>
     </div>

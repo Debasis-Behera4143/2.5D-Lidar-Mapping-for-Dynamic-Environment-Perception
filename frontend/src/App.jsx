@@ -101,7 +101,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050913] text-[#f8fafc] flex flex-col justify-between selection:bg-[#00d4ff]/30 selection:text-white">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#050913] text-[#f8fafc] flex flex-col justify-between selection:bg-[#00d4ff]/30 selection:text-white">
       {/* Top Application Header */}
       <Header
         selectedFrame={selectedFrame}
@@ -116,7 +116,7 @@ export default function App() {
       />
 
       {/* Main Workstation Canvas Area */}
-      <main className="flex-1 p-3 flex flex-col gap-3 max-w-[1920px] mx-auto w-full">
+      <main className="flex-1 p-2 sm:p-3 flex flex-col gap-3 max-w-[1920px] mx-auto w-full">
         {/* ROW 1: PRIMARY 3-COLUMN WORKSTATION VIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
           {/* Left Column (Scene Overview Pipeline) */}

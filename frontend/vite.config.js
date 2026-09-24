@@ -8,6 +8,21 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('plotly.js-dist-min')) {
+            return 'plotly';
+          }
+          if (id.includes('three')) {
+            return 'three';
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 3000,
+  },
   server: {
     port: 3000,
     proxy: {

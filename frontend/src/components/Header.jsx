@@ -53,7 +53,7 @@ export default function Header({
       </div>
 
       {/* Middle Interactive Playback & Dataset Controls */}
-      <div className="flex items-center gap-2 bg-[#050913] px-3 py-1.5 rounded-md border border-[#172742]">
+      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 bg-[#050913] px-2 sm:px-3 py-1.5 rounded-md border border-[#172742]">
         <button
           onClick={onTogglePlay}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition ${
@@ -130,7 +130,7 @@ export default function Header({
       </div>
 
       {/* Right Status Badges matching reference screenshot: Real-time Processing, Dataset, Frame, Time */}
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
         {/* 1. Real-time Processing Pill */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-[11px]">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

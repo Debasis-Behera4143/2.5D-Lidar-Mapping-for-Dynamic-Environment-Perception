@@ -18,6 +18,8 @@ export const DISPLAY_TAXONOMY = [
   { id: 9, name: 'Other', color: '#64748b', tag: 'Neutral', short: 'other' },
 ];
 
+export const SEMANTIC_CLASSES = DISPLAY_TAXONOMY;
+
 export const CLASS_COLORS = DISPLAY_TAXONOMY.reduce((acc, item) => {
   acc[item.id] = item.color;
   return acc;

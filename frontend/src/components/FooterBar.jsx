@@ -18,7 +18,7 @@ export default function FooterBar() {
       </div>
 
       {/* Right Semantic Tag Properties */}
-      <div className="flex items-center gap-4 text-[11px]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
         {/* Left Wall */}
         <div className="flex items-center gap-1.5">
           <Shield className="w-3.5 h-3.5 text-[#ef4444]" />

@@ -80,9 +80,20 @@ export default function MiddleViews({ points = [], elevationProfile = {} }) {
 
     const config = { displayModeBar: false, responsive: true };
 
-    Plotly.newPlot(profileRef.current, [traceBase, traceMid, traceCrest], layout, config);
+    Plotly.react(profileRef.current, [traceBase, traceMid, traceCrest], layout, config);
+
+    const handleResize = () => {
+      if (profileRef.current) {
+        Plotly.Plots.resize(profileRef.current);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver(handleResize);
+    if (profileRef.current) ro.observe(profileRef.current);
 
     return () => {
+      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
       if (profileRef.current) {
         Plotly.purge(profileRef.current);
       }
@@ -90,7 +101,7 @@ export default function MiddleViews({ points = [], elevationProfile = {} }) {
   }, [elevationProfile]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 w-full">
       {/* 1. 2.5D Elevation Map (Side/Front View) */}
       <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
         <div className="flex items-center justify-between text-xs font-bold text-white mb-1.5 pb-1 border-b border-[#172742]">
@@ -101,10 +112,16 @@ export default function MiddleViews({ points = [], elevationProfile = {} }) {
         <div className="relative w-full h-[150px] bg-[#050913] border border-[#132035] rounded overflow-hidden flex items-center justify-center">
           {/* Side View Canvas */}
           <canvas
-            width={340}
+            width={380}
             height={150}
+            className="w-full h-full object-cover"
             ref={(canvas) => {
               if (!canvas || !points.length) return;
+              const w = canvas.parentElement?.clientWidth || 380;
+              const h = 150;
+              if (canvas.width !== w) canvas.width = w;
+              if (canvas.height !== h) canvas.height = h;
+
               const ctx = canvas.getContext('2d');
               ctx.fillStyle = '#050913';
               ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -121,12 +138,12 @@ export default function MiddleViews({ points = [], elevationProfile = {} }) {
               for (let i = 0; i < points.length; i += step) {
                 const pt = points[i];
                 // pt[1] is lateral Y (-10 to 12m), pt[2] is height Z (0 to 5m)
-                const px = ((pt[1] + 10) / 22) * (canvas.width - 40);
+                const px = ((pt[1] + 10) / 22) * (canvas.width - 45);
                 const py = 135 - (pt[2] / 5.2) * 115;
 
                 // Turbo colormap: height
-                const h = Math.max(0, Math.min(1, pt[2] / 4.8));
-                ctx.fillStyle = `hsl(${220 - h * 220}, 95%, 55%)`;
+                const normH = Math.max(0, Math.min(1, pt[2] / 4.8));
+                ctx.fillStyle = `hsl(${220 - normH * 220}, 95%, 55%)`;
                 ctx.beginPath();
                 ctx.arc(px, py, 1.8, 0, Math.PI * 2);
                 ctx.fill();
@@ -135,7 +152,7 @@ export default function MiddleViews({ points = [], elevationProfile = {} }) {
           />
 
           {/* Turbo Height Colormap Bar right side matching reference image */}
-          <div className="absolute right-2 top-2 bottom-2 flex flex-col items-center justify-between text-[9px] font-mono text-[#cbd5e1] bg-[#09101f]/80 px-1 py-1 rounded border border-[#172742]">
+          <div className="absolute right-2 top-2 bottom-2 flex flex-col items-center justify-between text-[9px] font-mono text-[#cbd5e1] bg-[#09101f]/85 px-1 py-1 rounded border border-[#172742]">
             <div className="text-[8px] text-[#94a3b8] font-sans font-bold">Height (m)</div>
             <div className="text-red-400 font-bold">5.0</div>
             <div
@@ -160,52 +177,61 @@ export default function MiddleViews({ points = [], elevationProfile = {} }) {
         <div className="relative w-full h-[150px] bg-[#050913] border border-[#132035] rounded overflow-hidden flex items-center justify-center">
           {/* Top-down BEV canvas matching reference image intersection */}
           <canvas
-            width={340}
+            width={380}
             height={150}
+            className="w-full h-full object-cover"
             ref={(canvas) => {
               if (!canvas) return;
+              const w = canvas.parentElement?.clientWidth || 380;
+              const h = 150;
+              if (canvas.width !== w) canvas.width = w;
+              if (canvas.height !== h) canvas.height = h;
+
               const ctx = canvas.getContext('2d');
               ctx.fillStyle = '#050913';
               ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+              const cx = Math.floor(canvas.width / 2) - 15;
+              const cy = Math.floor(canvas.height / 2);
+
               // Background terrain (orange/green)
-              ctx.fillStyle = 'rgba(249, 115, 22, 0.4)';
+              ctx.fillStyle = 'rgba(249, 115, 22, 0.35)';
               ctx.fillRect(0, 0, canvas.width, canvas.height);
 
               // Vegetation clusters (green)
               ctx.fillStyle = '#10b981';
               ctx.beginPath();
-              ctx.arc(220, 35, 22, 0, Math.PI * 2);
-              ctx.arc(250, 45, 18, 0, Math.PI * 2);
-              ctx.arc(80, 115, 25, 0, Math.PI * 2);
+              ctx.arc(cx + 65, cy - 40, 20, 0, Math.PI * 2);
+              ctx.arc(cx + 90, cy - 30, 16, 0, Math.PI * 2);
+              ctx.arc(cx - 75, cy + 45, 22, 0, Math.PI * 2);
               ctx.fill();
 
               // Road corridor cross (blue #2563eb)
               ctx.fillStyle = '#2563eb';
-              ctx.fillRect(0, 50, canvas.width, 50); // Horizontal lane
-              ctx.fillRect(145, 0, 50, canvas.height); // Vertical cross lane
+              ctx.fillRect(0, cy - 25, canvas.width, 50); // Horizontal lane
+              ctx.fillRect(cx - 25, 0, 50, canvas.height); // Vertical cross lane
 
               // Sidewalk margins (purple #8b5cf6)
               ctx.fillStyle = '#8b5cf6';
-              ctx.fillRect(0, 42, canvas.width, 8);
-              ctx.fillRect(0, 100, canvas.width, 8);
+              ctx.fillRect(0, cy - 32, canvas.width, 7);
+              ctx.fillRect(0, cy + 25, canvas.width, 7);
 
               // Left building wall (red #ef4444)
               ctx.fillStyle = '#ef4444';
-              ctx.fillRect(15, 10, 55, 30);
-              ctx.fillRect(15, 110, 55, 30);
+              ctx.fillRect(cx - 110, cy - 65, 55, 28);
+              ctx.fillRect(cx - 110, cy + 36, 55, 28);
 
               // Vehicle markers (magenta #d946ef)
               ctx.fillStyle = '#d946ef';
-              ctx.fillRect(165, 30, 10, 16);
-              ctx.fillRect(230, 68, 16, 10);
+              ctx.fillRect(cx - 5, cy - 50, 10, 16);
+              ctx.fillRect(cx + 45, cy - 8, 16, 10);
 
               // Ego vehicle (white with cyan outline)
               ctx.fillStyle = '#ffffff';
               ctx.strokeStyle = '#00d4ff';
               ctx.lineWidth = 1.5;
-              ctx.fillRect(165, 80, 12, 18);
-              ctx.strokeRect(165, 80, 12, 18);
+              ctx.fillRect(cx - 6, cy + 8, 12, 18);
+              ctx.strokeRect(cx - 6, cy + 8, 12, 18);
             }}
           />
 
