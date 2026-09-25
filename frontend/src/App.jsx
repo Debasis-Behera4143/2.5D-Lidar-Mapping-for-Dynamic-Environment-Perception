@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import SceneOverview from './components/SceneOverview';
 import MainLidarViewer from './components/MainLidarViewer';
@@ -147,6 +147,7 @@ export default function App() {
         <div className="w-full">
           <MiddleViews
             points={frameData.points}
+            labels={frameData.predicted_labels}
             elevationProfile={frameData.elevation_profile}
           />
         </div>

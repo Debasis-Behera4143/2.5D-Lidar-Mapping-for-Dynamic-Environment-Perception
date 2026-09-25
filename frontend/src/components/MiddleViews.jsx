@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import Plotly from 'plotly.js-dist-min';
+import Three25DElevationViewer from './Three25DElevationViewer';
 
-export default function MiddleViews({ points = [], elevationProfile = {} }) {
+export default function MiddleViews({ points = [], labels = [], elevationProfile = {} }) {
   const profileRef = useRef(null);
 
   // Render Elevation Profile with Plotly.js matching reference screenshot
@@ -82,89 +83,39 @@ export default function MiddleViews({ points = [], elevationProfile = {} }) {
 
     Plotly.react(profileRef.current, [traceBase, traceMid, traceCrest], layout, config);
 
+    const node = profileRef.current;
     const handleResize = () => {
-      if (profileRef.current) {
-        Plotly.Plots.resize(profileRef.current);
+      if (node) {
+        Plotly.Plots.resize(node);
       }
     };
     window.addEventListener('resize', handleResize);
     const ro = new ResizeObserver(handleResize);
-    if (profileRef.current) ro.observe(profileRef.current);
+    if (node) ro.observe(node);
 
     return () => {
       window.removeEventListener('resize', handleResize);
       ro.disconnect();
-      if (profileRef.current) {
-        Plotly.purge(profileRef.current);
+      if (node) {
+        Plotly.purge(node);
       }
     };
   }, [elevationProfile]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 w-full">
-      {/* 1. 2.5D Elevation Map (Side/Front View) */}
+      {/* 1. 2.5D Elevation Map (Three.js WebGL Interactive 3D Relief & Cross-Section) */}
       <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
         <div className="flex items-center justify-between text-xs font-bold text-white mb-1.5 pb-1 border-b border-[#172742]">
-          <span>2.5D Elevation Map (Side/Front View)</span>
-          <span className="text-[10px] text-[#00d4ff] bg-[#00d4ff]/10 px-1 rounded">Cross-Section</span>
+          <span>2.5D Elevation Map (Three.js View)</span>
+          <span className="text-[10px] text-[#00d4ff] bg-[#00d4ff]/10 px-1 rounded">WebGL 3D</span>
         </div>
 
-        <div className="relative w-full h-[150px] bg-[#050913] border border-[#132035] rounded overflow-hidden flex items-center justify-center">
-          {/* Side View Canvas */}
-          <canvas
-            width={380}
-            height={150}
-            className="w-full h-full object-cover"
-            ref={(canvas) => {
-              if (!canvas || !points.length) return;
-              const w = canvas.parentElement?.clientWidth || 380;
-              const h = 150;
-              if (canvas.width !== w) canvas.width = w;
-              if (canvas.height !== h) canvas.height = h;
-
-              const ctx = canvas.getContext('2d');
-              ctx.fillStyle = '#050913';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-              // Road baseline
-              ctx.strokeStyle = '#1e3a5f';
-              ctx.lineWidth = 1;
-              ctx.beginPath();
-              ctx.moveTo(0, 135);
-              ctx.lineTo(canvas.width, 135);
-              ctx.stroke();
-
-              const step = Math.max(1, Math.floor(points.length / 1200));
-              for (let i = 0; i < points.length; i += step) {
-                const pt = points[i];
-                // pt[1] is lateral Y (-10 to 12m), pt[2] is height Z (0 to 5m)
-                const px = ((pt[1] + 10) / 22) * (canvas.width - 45);
-                const py = 135 - (pt[2] / 5.2) * 115;
-
-                // Turbo colormap: height
-                const normH = Math.max(0, Math.min(1, pt[2] / 4.8));
-                ctx.fillStyle = `hsl(${220 - normH * 220}, 95%, 55%)`;
-                ctx.beginPath();
-                ctx.arc(px, py, 1.8, 0, Math.PI * 2);
-                ctx.fill();
-              }
-            }}
-          />
-
-          {/* Turbo Height Colormap Bar right side matching reference image */}
-          <div className="absolute right-2 top-2 bottom-2 flex flex-col items-center justify-between text-[9px] font-mono text-[#cbd5e1] bg-[#09101f]/85 px-1 py-1 rounded border border-[#172742]">
-            <div className="text-[8px] text-[#94a3b8] font-sans font-bold">Height (m)</div>
-            <div className="text-red-400 font-bold">5.0</div>
-            <div
-              className="w-2.5 flex-1 mx-auto my-1 rounded-[1px]"
-              style={{
-                background: 'linear-gradient(to bottom, #ef4444, #eab308, #10b981, #00d4ff, #2563eb)',
-              }}
-            />
-            <div className="text-yellow-400 font-bold">2.5</div>
-            <div className="text-blue-400 font-bold">0.0</div>
-          </div>
-        </div>
+        <Three25DElevationViewer
+          points={points}
+          labels={labels}
+          elevationProfile={elevationProfile}
+        />
       </div>
 
       {/* 2. Semantic Map (Top View) */}

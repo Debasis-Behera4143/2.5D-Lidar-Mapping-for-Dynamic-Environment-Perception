@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { Eye, RotateCcw, Box, Layers, Gauge, Maximize2 } from 'lucide-react';
+import { Eye, Gauge } from 'lucide-react';
 import { CLASS_COLORS } from '../config/constants';
 
 // Screen-space 3D projected callout targets
@@ -356,9 +356,27 @@ export default function MainLidarViewer({
     );
     farCar.position.set(-1.6, 0.75, 32.0);
     scene.add(farCar);
-    dynamicVehiclesRef.current = [leadCarGroup, farCar];
 
-    // Dynamic Pedestrian
+    // Oncoming car in opposite lane
+    const oncomingCar = new THREE.Group();
+    const onCarBody = new THREE.Mesh(
+      new THREE.BoxGeometry(1.8, 1.25, 4.2),
+      new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.25, metalness: 0.8 })
+    );
+    onCarBody.position.y = 0.72;
+    oncomingCar.add(onCarBody);
+    const hLight1 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
+    hLight1.position.set(-0.6, 0.65, -2.1);
+    oncomingCar.add(hLight1);
+    const hLight2 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
+    hLight2.position.set(0.6, 0.65, -2.1);
+    oncomingCar.add(hLight2);
+    oncomingCar.position.set(-2.0, 0, 28.0);
+    scene.add(oncomingCar);
+
+    dynamicVehiclesRef.current = [leadCarGroup, farCar, oncomingCar];
+
+    // Dynamic Pedestrian 1 (Right sidewalk)
     const pedGroup = new THREE.Group();
     const pedBody = new THREE.Mesh(
       new THREE.CylinderGeometry(0.25, 0.25, 1.5, 8),
@@ -371,9 +389,228 @@ export default function MainLidarViewer({
     pedGroup.add(pedHead);
     pedGroup.position.set(5.2, 0, 18.0);
     scene.add(pedGroup);
-    dynamicPedestriansRef.current = [pedGroup];
 
-    // 8. 3D Axes Gizmo
+    // Pedestrian 2 (Left sidewalk)
+    const ped2Group = new THREE.Group();
+    const ped2Body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.24, 0.24, 1.45, 8),
+      new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.4 })
+    );
+    ped2Body.position.y = 0.72;
+    ped2Group.add(ped2Body);
+    const ped2Head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 8, 8), new THREE.MeshStandardMaterial({ color: 0xfacc15 }));
+    ped2Head.position.y = 1.6;
+    ped2Group.add(ped2Head);
+    ped2Group.position.set(-5.3, 0.16, 26.0);
+    scene.add(ped2Group);
+
+    dynamicPedestriansRef.current = [pedGroup, ped2Group];
+
+    // 8. 3D Architectural Buildings along the Left Boulevard
+    const buildingsGroup = new THREE.Group();
+    const buildingMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.75,
+      metalness: 0.35,
+    });
+    const glassMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.65,
+    });
+    const warmWindowMat = new THREE.MeshBasicMaterial({
+      color: 0xfef08a,
+      transparent: true,
+      opacity: 0.75,
+    });
+    const concreteWallMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.85,
+    });
+
+    const createBuilding = (x, z, width, height, depth) => {
+      const bGroup = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), buildingMat);
+      body.position.set(x, height / 2, z);
+      bGroup.add(body);
+
+      const numFloors = Math.floor(height / 2.4);
+      const numCols = Math.floor(depth / 2.2);
+      const facadeX = x + width / 2 + 0.02;
+
+      for (let floor = 1; floor < numFloors; floor++) {
+        const floorY = floor * 2.4;
+        for (let col = 0; col < numCols; col++) {
+          const winZ = z - depth / 2 + (col + 0.5) * (depth / numCols);
+          const isWarm = (floor + col) % 3 === 0;
+          const win = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.2, 1.1),
+            isWarm ? warmWindowMat : glassMat
+          );
+          win.rotation.y = Math.PI / 2;
+          win.position.set(facadeX, floorY, winZ);
+          bGroup.add(win);
+        }
+      }
+
+      // Rooftop HVAC & Red Beacon
+      const roofHvac = new THREE.Mesh(
+        new THREE.BoxGeometry(width * 0.45, 1.2, depth * 0.45),
+        new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.6 })
+      );
+      roofHvac.position.set(x, height + 0.6, z);
+      bGroup.add(roofHvac);
+
+      const beacon = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xef4444 })
+      );
+      beacon.position.set(x, height + 1.8, z);
+      bGroup.add(beacon);
+
+      return bGroup;
+    };
+
+    buildingsGroup.add(createBuilding(-14.0, 14.0, 10.0, 14.0, 16.0));
+    buildingsGroup.add(createBuilding(-15.0, 34.0, 11.0, 18.0, 18.0));
+    buildingsGroup.add(createBuilding(-13.5, -4.0, 9.0, 8.5, 14.0));
+    buildingsGroup.add(createBuilding(-15.5, 54.0, 11.0, 13.0, 16.0));
+
+    // Continuous Perimeter Safety Barrier / Wall (at X = -6.8m)
+    const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.35, 75.0), concreteWallMat);
+    wallMesh.position.set(-6.8, 0.68, 27.5);
+    buildingsGroup.add(wallMesh);
+
+    const wallEdges = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.45, 1.5, 75.0));
+    const wallLine = new THREE.LineSegments(
+      wallEdges,
+      new THREE.LineBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.7 })
+    );
+    wallLine.position.set(-6.8, 0.75, 27.5);
+    buildingsGroup.add(wallLine);
+
+    scene.add(buildingsGroup);
+
+    // 9. 3D Lush Trees with Multi-Tier Foliage Canopies
+    const treesGroup = new THREE.Group();
+    const treeTrunkMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1b, roughness: 0.9 });
+    const leafMats = [
+      new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.45 }),
+      new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.5 }),
+      new THREE.MeshStandardMaterial({ color: 0x34d399, roughness: 0.4 }),
+    ];
+
+    const treeConfigs = [
+      { x: 8.0, z: 8.0, trunkH: 2.4, crownR: 1.9 },
+      { x: 8.2, z: 22.0, trunkH: 2.8, crownR: 2.2 },
+      { x: 7.8, z: 36.0, trunkH: 2.2, crownR: 1.8 },
+      { x: 8.0, z: 48.0, trunkH: 2.5, crownR: 2.0 },
+    ];
+
+    const animatedTreeCanopies = [];
+
+    treeConfigs.forEach(({ x, z, trunkH, crownR }, idx) => {
+      const tGroup = new THREE.Group();
+      tGroup.position.set(x, 0, z);
+
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.35, trunkH, 10), treeTrunkMat);
+      trunk.position.y = trunkH / 2;
+      tGroup.add(trunk);
+
+      const canopyGroup = new THREE.Group();
+      canopyGroup.position.y = trunkH;
+
+      const centerCrown = new THREE.Mesh(new THREE.DodecahedronGeometry(crownR, 1), leafMats[idx % 3]);
+      centerCrown.position.y = crownR * 0.7;
+      canopyGroup.add(centerCrown);
+
+      const clusterOffsets = [
+        [0.8, 0.5, 0.6, 0.75],
+        [-0.7, 0.6, -0.6, 0.7],
+        [0.6, 0.9, -0.7, 0.65],
+        [-0.6, 0.8, 0.7, 0.65],
+        [0.0, crownR * 1.1, 0.0, 0.8],
+      ];
+
+      clusterOffsets.forEach(([ox, oy, oz, scale], cIdx) => {
+        const leafBall = new THREE.Mesh(new THREE.DodecahedronGeometry(crownR * scale, 1), leafMats[(idx + cIdx) % 3]);
+        leafBall.position.set(ox, oy, oz);
+        canopyGroup.add(leafBall);
+      });
+
+      tGroup.add(canopyGroup);
+      animatedTreeCanopies.push(canopyGroup);
+      treesGroup.add(tGroup);
+    });
+
+    scene.add(treesGroup);
+
+    // 10. 3D Street Lamp Posts along sidewalks
+    const streetLampGroup = new THREE.Group();
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.3 });
+    const luminaireMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    const lampPositions = [
+      { x: -4.8, z: 5.0, armDir: 1 },
+      { x: 4.8, z: 20.0, armDir: -1 },
+      { x: -4.8, z: 35.0, armDir: 1 },
+      { x: 4.8, z: 50.0, armDir: -1 },
+    ];
+
+    lampPositions.forEach(({ x, z, armDir }) => {
+      const lGroup = new THREE.Group();
+      lGroup.position.set(x, 0, z);
+
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.4, 8), poleMat);
+      mast.position.y = 2.2;
+      lGroup.add(mast);
+
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.07, 0.07), poleMat);
+      arm.position.set(armDir * 0.6, 4.35, 0);
+      lGroup.add(arm);
+
+      const lampHead = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.18), poleMat);
+      lampHead.position.set(armDir * 1.2, 4.3, 0);
+      lGroup.add(lampHead);
+
+      const bulb = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.14), luminaireMat);
+      bulb.rotation.x = Math.PI / 2;
+      bulb.position.set(armDir * 1.2, 4.25, 0);
+      lGroup.add(bulb);
+
+      streetLampGroup.add(lGroup);
+    });
+
+    scene.add(streetLampGroup);
+
+    // 11. Curbs, Sidewalks & Center Lane Markings
+    const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+
+    const leftSW = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.16, 75.0), sidewalkMat);
+    leftSW.position.set(-5.4, 0.08, 27.5);
+    scene.add(leftSW);
+
+    const rightSW = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.16, 75.0), sidewalkMat);
+    rightSW.position.set(5.4, 0.08, 27.5);
+    scene.add(rightSW);
+
+    const leftCurb = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 75.0), curbMat);
+    leftCurb.position.set(-4.2, 0.11, 27.5);
+    scene.add(leftCurb);
+
+    const rightCurb = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 75.0), curbMat);
+    rightCurb.position.set(4.2, 0.11, 27.5);
+    scene.add(rightCurb);
+
+    const laneLines = [];
+    for (let lz = -10.0; lz <= 65.0; lz += 4.0) {
+      laneLines.push(0, 0.04, lz, 0, 0.04, lz + 2.0);
+    }
+    const laneGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(laneLines, 3));
+    scene.add(new THREE.LineSegments(laneGeo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })));
+
+    // 12. 3D Axes Gizmo
     const axesGroup = new THREE.Group();
     axesGroup.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), 2.2, 0x00d4ff, 0.4, 0.2));
     axesGroup.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 2.2, 0xef4444, 0.4, 0.2));
@@ -445,6 +682,26 @@ export default function MainLidarViewer({
         const pedZ = 16.0 + Math.sin(simTime * 0.6) * 4.0;
         pedGroup.position.z = pedZ;
         target3D.pedestrian.z = pedZ;
+
+        // Animate Oncoming Vehicle along left lane
+        if (oncomingCar) {
+          const onZ = 30.0 - Math.sin(simTime * 0.75) * 9.0;
+          oncomingCar.position.z = onZ;
+        }
+
+        // Animate second pedestrian along left sidewalk
+        if (ped2Group) {
+          const ped2Z = 24.0 + Math.cos(simTime * 0.55) * 3.8;
+          ped2Group.position.z = ped2Z;
+        }
+
+        // Animate lush trees gentle organic wind sway
+        if (animatedTreeCanopies) {
+          animatedTreeCanopies.forEach((canopy, idx) => {
+            canopy.rotation.z = Math.sin(simTime * 1.8 + idx * 1.3) * 0.028;
+            canopy.rotation.x = Math.cos(simTime * 1.3 + idx * 0.9) * 0.022;
+          });
+        }
 
         // Sensor beam sweep
         if (lidarBeamRef.current) {

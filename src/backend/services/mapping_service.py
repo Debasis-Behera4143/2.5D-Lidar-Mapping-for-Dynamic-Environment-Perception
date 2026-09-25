@@ -32,12 +32,37 @@ class MappingService:
 
     @staticmethod
     def _normalize_payload(payload: Any) -> Dict[str, Any]:
-        """Convert Pydantic models or objects into standard perception dictionary."""
+        """Convert Pydantic models or objects into standard perception dictionary and sanitize labels."""
         if hasattr(payload, "model_dump"):
-            return payload.model_dump()
+            d = payload.model_dump()
         elif isinstance(payload, dict):
-            return payload
-        raise TypeError(f"Unsupported perception payload type: {type(payload).__name__}")
+            d = dict(payload)
+        else:
+            raise TypeError(f"Unsupported perception payload type: {type(payload).__name__}")
+
+        # Production robustness: sanitize any out-of-range class labels
+        if "predicted_labels" in d and d["predicted_labels"] is not None:
+            raw_labels = d["predicted_labels"]
+            if isinstance(raw_labels, np.ndarray):
+                labels_arr = raw_labels.copy()
+            elif isinstance(raw_labels, (list, tuple)):
+                labels_arr = np.asarray(raw_labels, dtype=np.int64)
+            else:
+                labels_arr = None
+
+            if labels_arr is not None:
+                # Remap barrier (8) or out-of-range labels to valid taxonomy classes
+                labels_arr[labels_arr == 8] = 2  # building/static barrier
+                invalid_mask = (labels_arr < 0) | (labels_arr >= 8)
+                if np.any(invalid_mask):
+                    labels_arr[invalid_mask] = 7  # other / noise
+
+                if isinstance(raw_labels, np.ndarray):
+                    d["predicted_labels"] = labels_arr
+                else:
+                    d["predicted_labels"] = labels_arr.tolist()
+
+        return d
 
     def generate_uniform_map(
         self,

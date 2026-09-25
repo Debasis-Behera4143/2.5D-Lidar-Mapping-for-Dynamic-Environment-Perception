@@ -235,14 +235,14 @@ class SimulationDataProvider(BaseDataProvider):
             labels_list.append(7)
             confs_list.append(0.96)
 
-        # 9. Barrier (Class 8, Brown #b45309)
+        # 9. Barrier (Class 2: Building / Static Barrier, #ef4444)
         n_bar = 120
         bx = rng.uniform(-8.0, 45.0, n_bar)
         by = -6.3 + rng.normal(0, 0.06, n_bar)
         bz = rng.uniform(0.15, 0.75, n_bar)
         for x, y, z in zip(bx, by, bz):
             points_list.append([round(float(x), 3), round(float(y), 3), round(float(z), 3), 0.6])
-            labels_list.append(8)
+            labels_list.append(2)
             confs_list.append(0.93)
 
         # Calculate class distribution

@@ -15,6 +15,7 @@ Provides a robust, typed client interface communicating with the FastAPI backend
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 import httpx
+import numpy as np
 
 from src.frontend.config import (
     API_TIMEOUT_SECONDS,
@@ -151,6 +152,23 @@ class ApiClient:
                 "_client_latency_ms": round(elapsed_ms, 2),
             }
 
+    @staticmethod
+    def _sanitize_perception_payload(payload: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Ensure predicted_labels are strictly in valid 8-class range [0, 7]."""
+        if not payload or not isinstance(payload, dict):
+            return payload
+        payload_copy = dict(payload)
+        labels = payload_copy.get("predicted_labels")
+        if labels is not None:
+            if isinstance(labels, np.ndarray):
+                arr = labels.copy()
+            else:
+                arr = np.array(labels, dtype=np.int64)
+            arr[arr == 8] = 2
+            arr[(arr < 0) | (arr >= 8)] = 7
+            payload_copy["predicted_labels"] = arr.tolist()
+        return payload_copy
+
     def generate_uniform_map(
         self,
         perception_payload: Dict[str, Any],
@@ -160,8 +178,9 @@ class ApiClient:
         """
         Generate uniform 2.5D grid map.
         """
+        sanitized_perc = self._sanitize_perception_payload(perception_payload)
         body = {
-            "perception": perception_payload,
+            "perception": sanitized_perc,
             "resolution": float(resolution),
             "roi_bounds": list(roi_bounds) if roi_bounds is not None else None,
         }
@@ -202,9 +221,11 @@ class ApiClient:
         """
         Generate adaptive variable-resolution 2.5D grid map.
         """
+        sanitized_curr = self._sanitize_perception_payload(perception_payload)
+        sanitized_prev = self._sanitize_perception_payload(previous_payload)
         body = {
-            "perception": perception_payload,
-            "previous_perception": previous_payload,
+            "perception": sanitized_curr,
+            "previous_perception": sanitized_prev,
             "base_resolution": float(base_resolution),
             "fine_resolution": float(fine_resolution),
             "importance_threshold": float(importance_threshold),

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, Activity, Database, Clock, Server, Layers } from 'lucide-react';
+import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, Server } from 'lucide-react';
 import { SIMULATION_FRAMES } from '../config/constants';
 
 export default function Header({
