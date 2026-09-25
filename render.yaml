@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: lidar-adaptive-mapping-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: LIDAR_DEVICE
+        value: cpu
+      - key: LIDAR_DATA_DIR
+        value: /app/data
+      - key: LIDAR_CHECKPOINT_PATH
+        value: /app/checkpoints/best_randlanet_real.pt
+
+  - type: web
+    name: lidar-adaptive-mapping-dashboard
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://lidar-adaptive-mapping-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
