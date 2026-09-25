@@ -142,3 +142,41 @@ python -m pytest tests/test_frontend_api_client.py -q
 - **Movement Estimation**: Point displacement uses nearest-neighbor spatial queries via `scipy.spatial.cKDTree` rather than full SLAM ego-motion compensation or scene flow.
 - **Memory Metric**: Memory reduction figures reflect a 64-byte theoretical struct model per cell; actual runtime heap depends on Python dict/NumPy allocation overhead.
 - **2.5D Representation**: A 2.5D grid stores one elevation profile per horizontal cell $(x, y)$, meaning multi-level overhanging structures (such as bridges or tunnel ceilings) are projected onto the dominant surface.
+
+## 9. Production Deployment with Docker
+
+The repository includes a production Docker Compose deployment. It runs the FastAPI inference service privately and serves the built React dashboard through Nginx on port 80.
+
+### Requirements
+
+- Docker Engine and Docker Compose v2 on a Linux server or Docker Desktop
+- The `checkpoints/` directory with a model checkpoint
+- The `data/` directory with the LiDAR samples used by the dashboard
+
+### Start the application
+
+```bash
+docker compose up -d --build
+```
+
+Open `http://localhost` for the dashboard. The API documentation is available at `http://localhost/docs`.
+
+### Configure inference hardware
+
+The default configuration uses CPU inference. To use a CUDA-enabled backend, create a `.env` file beside `docker-compose.yml`:
+
+```env
+LIDAR_DEVICE=cuda
+```
+
+The backend container needs a CUDA-enabled Docker runtime and compatible PyTorch image for GPU inference; CPU mode works with the included Python image without additional runtime configuration.
+
+### Update or stop the deployment
+
+```bash
+docker compose up -d --build
+docker compose logs -f backend
+docker compose down
+```
+
+For a public server, place HTTPS in front of port 80 using a cloud load balancer or Nginx/Caddy on the host. Do not expose the backend port directly; the frontend container proxies `/api/` to FastAPI internally.

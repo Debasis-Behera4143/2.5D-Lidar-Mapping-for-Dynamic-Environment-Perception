@@ -22,10 +22,9 @@ class InferenceRequest(BaseModel):
         default=None,
         description="Optional path to ground truth label (.label file) for evaluation",
     )
-    num_points: int = Field(
-        default=4096,
-        gt=0,
-        description="Target number of points for model downsampling (> 0)",
+    num_points: Optional[int] = Field(
+        default=None,
+        description="Optional target number of points for model downsampling; leave unset to keep the full frame intact.",
     )
     interpolate_to_full: bool = Field(
         default=False,
@@ -49,6 +48,13 @@ class InferenceRequest(BaseModel):
     def validate_label_path(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             return validate_non_empty_str(v, "label_path")
+        return v
+
+    @field_validator("num_points")
+    @classmethod
+    def validate_num_points(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v <= 0:
+            raise ValueError("num_points must be strictly positive (> 0) if provided")
         return v
 
 
@@ -147,6 +153,7 @@ class InferenceResponse(BaseResponse):
 
     frame_id: str = Field(description="LiDAR scan frame identifier, e.g. '000000'")
     total_points: int = Field(gt=0, description="Total number of points processed (> 0)")
+    original_point_count: int = Field(gt=0, description="Original full-frame point count before any visualization downsampling")
     predicted_labels: List[int] = Field(
         description="Predicted class IDs for points (or downsampled points)",
     )

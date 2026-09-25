@@ -106,6 +106,21 @@ class SampleService:
                     except ValueError:
                         bin_path_str = str(bin_file).replace("\\", "/")
 
+                    # Check for poses.txt in sequence directory
+                    poses_file = seq_dir / "poses.txt"
+                    pose_mat = None
+                    has_pose = False
+                    if poses_file.is_file():
+                        try:
+                            from src.data.lidar_loader import LiDARLoader
+                            all_poses = LiDARLoader.load_poses(poses_file)
+                            frame_idx = int(frame_id)
+                            if 0 <= frame_idx < len(all_poses):
+                                pose_mat = all_poses[frame_idx].tolist()
+                                has_pose = True
+                        except Exception:
+                            has_pose = False
+
                     sample_meta: Dict[str, Any] = {
                         "sample_id": sample_id,
                         "dataset_type": dataset_type,
@@ -115,6 +130,8 @@ class SampleService:
                         "file_size_bytes": int(file_size),
                         "has_ground_truth": has_gt,
                         "has_labels": has_gt,
+                        "has_pose": has_pose,
+                        "pose": pose_mat,
                         "point_cloud_path": bin_path_str,
                         "bin_path": bin_path_str,
                         "label_path": label_path_str,

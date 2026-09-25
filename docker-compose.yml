@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      LIDAR_DEVICE: ${LIDAR_DEVICE:-cpu}
+      LIDAR_DATA_DIR: /app/data
+      LIDAR_CHECKPOINT_PATH: /app/checkpoints/best_randlanet_real.pt
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    restart: unless-stopped

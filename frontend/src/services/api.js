@@ -1,106 +1,148 @@
 /**
- * API Service for communicating with FastAPI Backend and fallback to Simulation.
+ * Backend API Client Service for LiDAR Perception & Mapping.
+ * Integrates with FastAPI /api/v1 endpoints with robust error handling and fallback.
  */
 
-import { API_BASE_URL, SIMULATION_FRAMES } from '../config/constants';
-import { generateSimulationFrame } from './simulationData';
+import { API_BASE_URL } from '../app/config';
 
-class ApiService {
-  constructor() {
-    this.baseUrl = API_BASE_URL;
-  }
-
-  async checkHealth() {
+async function handleResponse(res) {
+  if (!res.ok) {
+    let errorMsg = `HTTP ${res.status} ${res.statusText}`;
     try {
-      const res = await fetch(`${this.baseUrl}/api/v1/health`, { method: 'GET' });
-      if (res.ok) {
-        const data = await res.json();
-        return { online: true, ...data };
-      }
-      return { online: false, error: 'Non-200 response' };
+      const data = await res.json();
+      if (data.detail) errorMsg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+      else if (data.message) errorMsg = data.message;
     } catch {
-      return { online: false, error: 'Failed to connect to backend' };
+      // ignore json parse error
     }
+    throw new Error(errorMsg);
   }
-
-  async getClasses() {
-    try {
-      const res = await fetch(`${this.baseUrl}/api/v1/classes`);
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch {
-      // ignore
-    }
-    return [];
-  }
-
-  async getSamples() {
-    try {
-      const res = await fetch(`${this.baseUrl}/api/v1/samples`);
-      if (res.ok) {
-        const data = await res.json();
-        return data.samples || [];
-      }
-    } catch {
-      // ignore
-    }
-    return [];
-  }
-
-  async getSimulationFrames() {
-    try {
-      const res = await fetch(`${this.baseUrl}/api/v1/simulation/frames`);
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch {
-      // ignore
-    }
-    return SIMULATION_FRAMES;
-  }
-
-  async getFrameData(frameId, dataSource = 'Simulation') {
-    if (dataSource === 'FastAPI') {
-      try {
-        const res = await fetch(`${this.baseUrl}/api/v1/simulation/frame/${frameId}`);
-        if (res.ok) {
-          const data = await res.json();
-          return {
-            ...data.perception,
-            adaptive_map: data.adaptive_map,
-            uniform_map: data.uniform_map,
-            comparison: data.comparison,
-            elevation_profile: data.elevation_profile,
-            performance: data.performance,
-            system_logs: data.logs,
-            scene_objects: data.scene_objects,
-            provenance: 'MEASURED (FastAPI)',
-          };
-        }
-      } catch {
-        console.warn('FastAPI unavailable, falling back to local simulation data.');
-      }
-    }
-
-    // Default to deterministic simulation engine
-    return generateSimulationFrame(frameId);
-  }
-
-  async runInference(payload) {
-    try {
-      const res = await fetch(`${this.baseUrl}/api/v1/inference`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch (e) {
-      return { _success: false, error: e.message };
-    }
-  }
+  return res.json();
 }
 
-export const apiService = new ApiService();
+export const api = {
+  /**
+   * Health & Device diagnostics
+   */
+  async getHealth() {
+    const res = await fetch(`${API_BASE_URL}/api/v1/health`);
+    return handleResponse(res);
+  },
+
+  /**
+   * 8-Class Semantic Taxonomy
+   */
+  async getClasses() {
+    const res = await fetch(`${API_BASE_URL}/api/v1/classes`);
+    return handleResponse(res);
+  },
+
+  /**
+   * Discovered KITTI LiDAR scan samples
+   */
+  async getSamples() {
+    const res = await fetch(`${API_BASE_URL}/api/v1/samples`);
+    return handleResponse(res);
+  },
+
+  /**
+   * Single frame metadata
+   */
+  async getSample(sampleId) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/samples/${encodeURIComponent(sampleId)}`);
+    return handleResponse(res);
+  },
+
+  /**
+   * Run semantic segmentation inference on a .bin scan
+   */
+  async runInference({ binPath, labelPath = null, numPoints = null, interpolateToFull = false, previewPointsLimit = 3000 }) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/inference`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bin_path: binPath,
+        label_path: labelPath,
+        num_points: numPoints,
+        interpolate_to_full: interpolateToFull,
+        preview_points_limit: previewPointsLimit,
+      }),
+    });
+    return handleResponse(res);
+  },
+
+  /**
+   * Generate 2.5D Uniform Grid Map
+   */
+  async generateUniformMap({ perception, resolution = 0.50, roiBounds = null }) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/map/uniform`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        perception,
+        resolution,
+        roi_bounds: roiBounds,
+      }),
+    });
+    return handleResponse(res);
+  },
+
+  /**
+   * Generate 2.5D Adaptive Variable-Resolution Grid Map
+   */
+  async generateAdaptiveMap({
+    perception,
+    previousPerception = null,
+    baseResolution = 1.0,
+    fineResolution = 0.25,
+    importanceThreshold = 0.50,
+    dynamicThreshold = 0.25,
+    roiBounds = null,
+  }) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/map/adaptive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        perception,
+        previous_perception: previousPerception,
+        base_resolution: baseResolution,
+        fine_resolution: fineResolution,
+        importance_threshold: importanceThreshold,
+        dynamic_threshold: dynamicThreshold,
+        roi_bounds: roiBounds,
+      }),
+    });
+    return handleResponse(res);
+  },
+
+  /**
+   * Compare uniform vs adaptive maps
+   */
+  async compareMaps(uniformMap, adaptiveMap) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/map/compare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uniform_map: uniformMap,
+        adaptive_map: adaptiveMap,
+      }),
+    });
+    return handleResponse(res);
+  },
+
+  /**
+   * Simulation frames list
+   */
+  async getSimulationFrames() {
+    const res = await fetch(`${API_BASE_URL}/api/v1/simulation/frames`);
+    return handleResponse(res);
+  },
+
+  /**
+   * Deterministic Simulation Frame bundle
+   */
+  async getSimulationFrame(frameId) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/simulation/frame/${encodeURIComponent(frameId)}`);
+    return handleResponse(res);
+  },
+};

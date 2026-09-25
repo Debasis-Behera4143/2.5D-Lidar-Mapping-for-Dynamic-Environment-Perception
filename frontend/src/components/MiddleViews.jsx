@@ -1,237 +1,217 @@
-import React, { useEffect, useRef } from 'react';
-import Plotly from 'plotly.js-dist-min';
+/**
+ * MiddleViews.jsx
+ * The three horizontal cards directly below the main 3D viewer matching the reference screenshot:
+ * 1. 2.5D Elevation Map (Side/Front View) with vertical colorbar (0.0 to 5.0m)
+ * 2. Semantic Map (Top View) 2D BEV raster with mini legend
+ * 3. Elevation Profile (Front View) Distance (0-100m) vs Height (0-10m)
+ */
+
+import React, { useMemo } from 'react';
+import { SEMANTIC_CLASSES_8, CLASS_COLORS } from '../config/constants';
 import Three25DElevationViewer from './Three25DElevationViewer';
 
-export default function MiddleViews({ points = [], labels = [], elevationProfile = {} }) {
-  const profileRef = useRef(null);
+/**
+ * 1. 2.5D Elevation Map (Side/Front View)
+ */
+export function SideFrontElevationView({ points = [], labels = [] }) {
+  return (
+    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none relative overflow-hidden">
+      <div className="text-xs font-bold text-white mb-1 tracking-tight flex items-center justify-between">
+        <span>2.5D Elevation Map (Side/Front View)</span>
+        <span className="text-[9px] font-mono text-[#5d7d9f]">Turbo Height</span>
+      </div>
 
-  // Render Elevation Profile with Plotly.js matching reference screenshot
-  useEffect(() => {
-    if (!profileRef.current) return;
+      <div className="flex-1 w-full h-full relative">
+        <Three25DElevationViewer points={points} labels={labels} />
+      </div>
+    </div>
+  );
+}
 
-    const x = elevationProfile.distance_m || Array.from({ length: 101 }, (_, i) => i);
-    const y = elevationProfile.height_m || Array.from({ length: 101 }, () => 2.0);
-
-    // Multi-tier elevation gradient traces matching the reference screenshot:
-    // Base blue/cyan -> Mid yellow/green -> High red/orange crest
-    const yBase = y.map((val) => Math.min(val, 2.0));
-    const yMid = y.map((val) => Math.min(val, 4.8));
-
-    const traceBase = {
-      x,
-      y: yBase,
-      type: 'scatter',
-      mode: 'none',
-      fill: 'tozeroy',
-      fillcolor: 'rgba(0, 212, 255, 0.4)',
-      hoverinfo: 'none',
-      name: 'Base',
-    };
-
-    const traceMid = {
-      x,
-      y: yMid,
-      type: 'scatter',
-      mode: 'none',
-      fill: 'tonexty',
-      fillcolor: 'rgba(234, 179, 8, 0.45)',
-      hoverinfo: 'none',
-      name: 'Mid',
-    };
-
-    const traceCrest = {
-      x,
-      y,
-      type: 'scatter',
-      mode: 'lines',
-      line: {
-        color: '#ef4444',
-        width: 2.5,
-        shape: 'spline',
-      },
-      fill: 'tonexty',
-      fillcolor: 'rgba(239, 68, 68, 0.65)',
-      hovertext: x.map((dist, i) => `Dist: ${dist} m<br>Height: ${y[i].toFixed(2)} m`),
-      hoverinfo: 'text',
-      name: 'Peak Elevation',
-    };
-
-    const layout = {
-      paper_bgcolor: '#09101f',
-      plot_bgcolor: '#09101f',
-      margin: { l: 26, r: 10, t: 8, b: 24 },
-      xaxis: {
-        title: { text: 'Distance (m)', font: { color: '#94a3b8', size: 9 } },
-        range: [0, 100],
-        dtick: 20,
-        gridcolor: '#132035',
-        zerolinecolor: '#1e2d48',
-        tickfont: { color: '#94a3b8', size: 8 },
-      },
-      yaxis: {
-        title: { text: 'Height (m)', font: { color: '#94a3b8', size: 9 } },
-        range: [0, 10],
-        dtick: 5,
-        gridcolor: '#132035',
-        zerolinecolor: '#1e2d48',
-        tickfont: { color: '#94a3b8', size: 8 },
-      },
-      showlegend: false,
-    };
-
-    const config = { displayModeBar: false, responsive: true };
-
-    Plotly.react(profileRef.current, [traceBase, traceMid, traceCrest], layout, config);
-
-    const node = profileRef.current;
-    const handleResize = () => {
-      if (node) {
-        Plotly.Plots.resize(node);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    const ro = new ResizeObserver(handleResize);
-    if (node) ro.observe(node);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      ro.disconnect();
-      if (node) {
-        Plotly.purge(node);
-      }
-    };
-  }, [elevationProfile]);
+/**
+ * 2. Semantic Map (Top View) - 2D Bird's Eye View Grid
+ */
+export function SemanticMapTopView({
+  points = [],
+  labels = [],
+  adaptiveMap = null,
+}) {
+  // Generate 2D BEV Top-Down raster grid from actual points or adaptive map cells
+  const bevCells = useMemo(() => {
+    if (adaptiveMap?.cells && adaptiveMap.cells.length > 0) {
+      return adaptiveMap.cells.slice(0, 120);
+    }
+    // Fallback compute from points
+    if (!points || points.length === 0) return [];
+    const step = Math.max(1, Math.floor(points.length / 100));
+    const sample = [];
+    for (let i = 0; i < points.length; i += step) {
+      sample.push({
+        center_x: points[i][0],
+        center_y: points[i][1],
+        dominant_class: labels[i] !== undefined ? labels[i] : 0,
+      });
+    }
+    return sample;
+  }, [points, labels, adaptiveMap]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 w-full">
-      {/* 1. 2.5D Elevation Map (Three.js WebGL Interactive 3D Relief & Cross-Section) */}
-      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
-        <div className="flex items-center justify-between text-xs font-bold text-white mb-1.5 pb-1 border-b border-[#172742]">
-          <span>2.5D Elevation Map (Three.js View)</span>
-          <span className="text-[10px] text-[#00d4ff] bg-[#00d4ff]/10 px-1 rounded">WebGL 3D</span>
-        </div>
-
-        <Three25DElevationViewer
-          points={points}
-          labels={labels}
-          elevationProfile={elevationProfile}
-        />
+    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none">
+      <div className="text-xs font-bold text-white mb-1 tracking-tight flex items-center justify-between">
+        <span>Semantic Map (Top View)</span>
+        <span className="text-[9px] font-mono text-[#5d7d9f]">2D BEV</span>
       </div>
 
-      {/* 2. Semantic Map (Top View) */}
-      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
-        <div className="flex items-center justify-between text-xs font-bold text-white mb-1.5 pb-1 border-b border-[#172742]">
-          <span>Semantic Map (Top View)</span>
-          <span className="text-[10px] text-emerald-400 bg-emerald-400/10 px-1 rounded">BEV</span>
+      <div className="flex-1 flex items-center justify-between gap-2.5">
+        {/* 2D Intersection BEV Raster Canvas */}
+        <div className="w-36 h-28 bg-[#030712] border border-[#14233c] rounded relative overflow-hidden p-1 flex items-center justify-center">
+          <svg viewBox="0 0 100 100" className="w-full h-full">
+            {/* Background */}
+            <rect x="0" y="0" width="100" height="100" fill="#050c18" />
+
+            {/* Render actual top-down BEV cells */}
+            {bevCells.map((c, idx) => {
+              // Map (-20..20 lateral, -10..50 longitudinal) to (0..100 SVG coords)
+              const svgX = 50 + (c.center_y || 0) * 2.2;
+              const svgY = 70 - (c.center_x || 0) * 1.3;
+              const col = CLASS_COLORS[c.dominant_class] || '#1d64f2';
+              return (
+                <rect
+                  key={idx}
+                  x={Math.max(2, Math.min(94, svgX - 2.5))}
+                  y={Math.max(2, Math.min(94, svgY - 2.5))}
+                  width={5}
+                  height={5}
+                  fill={col}
+                  opacity={0.85}
+                  rx={0.5}
+                />
+              );
+            })}
+
+            {/* Ego Car Marker */}
+            <rect x="47" y="65" width="6" height="10" rx="1.5" fill="#ffffff" stroke="#38bdf8" strokeWidth="0.8" />
+          </svg>
         </div>
 
-        <div className="relative w-full h-[150px] bg-[#050913] border border-[#132035] rounded overflow-hidden flex items-center justify-center">
-          {/* Top-down BEV canvas matching reference image intersection */}
-          <canvas
-            width={380}
-            height={150}
-            className="w-full h-full object-cover"
-            ref={(canvas) => {
-              if (!canvas) return;
-              const w = canvas.parentElement?.clientWidth || 380;
-              const h = 150;
-              if (canvas.width !== w) canvas.width = w;
-              if (canvas.height !== h) canvas.height = h;
-
-              const ctx = canvas.getContext('2d');
-              ctx.fillStyle = '#050913';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-              const cx = Math.floor(canvas.width / 2) - 15;
-              const cy = Math.floor(canvas.height / 2);
-
-              // Background terrain (orange/green)
-              ctx.fillStyle = 'rgba(249, 115, 22, 0.35)';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-              // Vegetation clusters (green)
-              ctx.fillStyle = '#10b981';
-              ctx.beginPath();
-              ctx.arc(cx + 65, cy - 40, 20, 0, Math.PI * 2);
-              ctx.arc(cx + 90, cy - 30, 16, 0, Math.PI * 2);
-              ctx.arc(cx - 75, cy + 45, 22, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Road corridor cross (blue #2563eb)
-              ctx.fillStyle = '#2563eb';
-              ctx.fillRect(0, cy - 25, canvas.width, 50); // Horizontal lane
-              ctx.fillRect(cx - 25, 0, 50, canvas.height); // Vertical cross lane
-
-              // Sidewalk margins (purple #8b5cf6)
-              ctx.fillStyle = '#8b5cf6';
-              ctx.fillRect(0, cy - 32, canvas.width, 7);
-              ctx.fillRect(0, cy + 25, canvas.width, 7);
-
-              // Left building wall (red #ef4444)
-              ctx.fillStyle = '#ef4444';
-              ctx.fillRect(cx - 110, cy - 65, 55, 28);
-              ctx.fillRect(cx - 110, cy + 36, 55, 28);
-
-              // Vehicle markers (magenta #d946ef)
-              ctx.fillStyle = '#d946ef';
-              ctx.fillRect(cx - 5, cy - 50, 10, 16);
-              ctx.fillRect(cx + 45, cy - 8, 16, 10);
-
-              // Ego vehicle (white with cyan outline)
-              ctx.fillStyle = '#ffffff';
-              ctx.strokeStyle = '#00d4ff';
-              ctx.lineWidth = 1.5;
-              ctx.fillRect(cx - 6, cy + 8, 12, 18);
-              ctx.strokeRect(cx - 6, cy + 8, 12, 18);
-            }}
-          />
-
-          {/* Mini Legend inside Top View right side */}
-          <div className="absolute right-1.5 top-1.5 bottom-1.5 bg-[#09101f]/90 border border-[#172742] p-1.5 rounded flex flex-col justify-between text-[8px] text-[#cbd5e1] font-medium pointer-events-none">
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[1px] bg-[#2563eb]" />
-              <span>Road</span>
+        {/* Mini 2-Column Legend */}
+        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-[#9bb3d1] flex-1">
+          {SEMANTIC_CLASSES_8.map((l) => (
+            <div key={l.id} className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: l.color }} />
+              <span className="truncate text-[9.5px]">{l.name.split(' ')[0]}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[1px] bg-[#8b5cf6]" />
-              <span>Sidewalk</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[1px] bg-[#ef4444]" />
-              <span>Building</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[1px] bg-[#10b981]" />
-              <span>Vegetation</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[1px] bg-[#d946ef]" />
-              <span>Vehicle</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[1px] bg-[#eab308]" />
-              <span>Pedestrian</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[1px] bg-[#06b6d4]" />
-              <span>Pole</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-[1px] bg-[#b45309]" />
-              <span>Barrier</span>
-            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 3. Elevation Profile (Front View)
+ */
+export function ElevationProfileFrontView({
+  points = [],
+  profileData = null,
+}) {
+  // Compute profile curve from points or use provided profile
+  const { pathD, fillD, maxH } = useMemo(() => {
+    let dists = [];
+    let heights = [];
+
+    if (profileData?.distance_m && profileData?.height_m) {
+      dists = profileData.distance_m;
+      heights = profileData.height_m;
+    } else if (points && points.length > 0) {
+      // Bin points along distance X (0 to 60m) and compute max height
+      const numBins = 30;
+      const binMaxH = new Array(numBins).fill(0.1);
+      const step = Math.max(1, Math.floor(points.length / 1000));
+      for (let i = 0; i < points.length; i += step) {
+        const x = points[i][0];
+        const z = points[i][2];
+        if (x >= 0 && x <= 60) {
+          const binIdx = Math.min(numBins - 1, Math.floor((x / 60) * numBins));
+          binMaxH[binIdx] = Math.max(binMaxH[binIdx], z);
+        }
+      }
+      dists = Array.from({ length: numBins }, (_, i) => (i / numBins) * 100);
+      heights = binMaxH;
+    } else {
+      // Reference baseline default
+      dists = [0, 15, 30, 45, 60, 75, 90, 100];
+      heights = [0.2, 1.4, 2.8, 4.5, 7.8, 3.2, 1.8, 0.4];
+    }
+
+    const maxVal = Math.max(5.0, ...heights);
+    const svgW = 300;
+    const svgH = 65;
+
+    const pts = dists.map((d, i) => {
+      const h = heights[i] !== undefined ? heights[i] : 0.2;
+      const px = (d / 100) * svgW;
+      const py = svgH - (h / 10) * (svgH - 5);
+      return `${px.toFixed(1)},${py.toFixed(1)}`;
+    });
+
+    const pD = `M ${pts.join(' L ')}`;
+    const fD = `M 0,${svgH} L ${pts.join(' L ')} L ${svgW},${svgH} Z`;
+
+    return { pathD: pD, fillD: fD, maxH: maxVal.toFixed(1) };
+  }, [points, profileData]);
+
+  return (
+    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none">
+      <div className="text-xs font-bold text-white mb-1 tracking-tight flex items-center justify-between">
+        <span>Elevation Profile (Front View)</span>
+        <span className="text-[9px] font-mono text-[#5d7d9f]">Max: {maxH}m</span>
+      </div>
+
+      <div className="flex-1 flex flex-col justify-between">
+        {/* SVG Rainbow Elevation Envelope */}
+        <div className="h-24 w-full relative flex items-end">
+          <svg viewBox="0 0 300 70" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+            <defs>
+              <linearGradient id="elevRainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#00d2ff" />
+                <stop offset="30%" stopColor="#eab308" />
+                <stop offset="65%" stopColor="#ef4444" />
+                <stop offset="85%" stopColor="#d946ef" />
+                <stop offset="100%" stopColor="#00d2ff" />
+              </linearGradient>
+            </defs>
+
+            {/* Filled Mountain Peak Profile */}
+            <path d={fillD} fill="url(#elevRainbow)" opacity="0.9" />
+
+            {/* Outline Stroke */}
+            <path d={pathD} fill="none" stroke="#ffffff" strokeWidth="1.2" opacity="0.85" />
+
+            {/* Baseline Grid */}
+            <line x1="0" y1="65" x2="300" y2="65" stroke="#1f375b" strokeWidth="1" />
+          </svg>
+
+          {/* Left Y Axis Values */}
+          <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-[8px] font-mono text-[#6e8db3]">
+            <span>10m</span>
+            <span>5m</span>
+            <span>0m</span>
           </div>
         </div>
-      </div>
 
-      {/* 3. Elevation Profile (Front View) Plotly Area Chart */}
-      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 flex flex-col shadow-md">
-        <div className="flex items-center justify-between text-xs font-bold text-white mb-1.5 pb-1 border-b border-[#172742]">
-          <span>Elevation Profile (Front View)</span>
-          <span className="text-[10px] text-rose-400 bg-rose-400/10 px-1 rounded">1D Profile</span>
+        {/* X Axis: Distance (m) */}
+        <div className="flex justify-between text-[8px] font-mono text-[#6e8db3] px-2 pt-0.5 border-t border-[#162744]">
+          <span>0</span>
+          <span>20</span>
+          <span>40</span>
+          <span>60</span>
+          <span>80</span>
+          <span>100</span>
         </div>
-
-        <div ref={profileRef} className="w-full h-[150px] rounded overflow-hidden" />
+        <div className="text-center text-[9px] font-mono text-[#89a7cc] -mt-0.5">
+          Distance (m)
+        </div>
       </div>
     </div>
   );

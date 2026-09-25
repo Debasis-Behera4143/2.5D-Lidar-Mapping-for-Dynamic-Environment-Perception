@@ -2,18 +2,15 @@
 Frontend data adapter and visualization processing utilities.
 
 Manages:
-- Streamlit session state initialization and persistence
 - Safe visualization-only downsampling (maintains mapping integrity)
-- Cell extraction and formatting for Plotly 2D/3D rendering
+- Cell extraction and formatting for 2D/3D rendering
 - Geometric candidate cluster estimation for object analysis
-- Timestamped workstation logger
 """
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from sklearn.cluster import DBSCAN
-import streamlit as st
 
 from src.frontend.config import (
     CLASS_COLORS,
@@ -27,63 +24,6 @@ from src.frontend.config import (
 )
 
 
-def init_session_state() -> None:
-    """Initialize default session state keys if not already present."""
-    defaults: Dict[str, Any] = {
-        "data_source": "Simulation",
-        "selected_frame_id": "1248",
-        "sim_frame_index": 1248,
-        "selected_sample_id": None,
-        "sample_metadata": None,
-        "perception_result": None,
-        "previous_perception_result": None,
-        "uniform_map_result": None,
-        "adaptive_map_result": None,
-        "comparison_result": None,
-        "base_resolution": DEFAULT_BASE_RESOLUTION,
-        "fine_resolution": DEFAULT_FINE_RESOLUTION,
-        "importance_threshold": DEFAULT_IMPORTANCE_THRESHOLD,
-        "dynamic_threshold": DEFAULT_DYNAMIC_THRESHOLD,
-        "num_points": DEFAULT_NUM_POINTS,
-        "preview_limit": DEFAULT_PREVIEW_POINTS,
-        "selected_classes": list(CLASS_NAMES.keys()),
-        "confidence_threshold": 0.0,
-        "color_mode": "Semantic",
-        "view_preset": "3D Perspective",
-        "show_grid": True,
-        "show_bboxes": True,
-        "show_axes": True,
-        "logs": [
-            {
-                "time": datetime.now().strftime("%H:%M:%S"),
-                "tag": "INIT",
-                "msg": "Workstation initialized. Ready for LiDAR scan ingestion.",
-            }
-        ],
-        "timings": {
-            "inference_ms": None,
-            "uniform_mapping_ms": None,
-            "adaptive_mapping_ms": None,
-            "comparison_ms": None,
-            "total_pipeline_ms": None,
-        },
-    }
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
-
-
-def add_system_log(msg: str, tag: str = "INFO") -> None:
-    """Append a timestamped log entry to session state."""
-    if "logs" not in st.session_state:
-        st.session_state.logs = []
-    timestamp = datetime.now().strftime("%H:%M:%S")
-    st.session_state.logs.append({"time": timestamp, "tag": tag, "msg": msg})
-    # Keep last 100 entries to prevent memory growth
-    if len(st.session_state.logs) > 100:
-        st.session_state.logs = st.session_state.logs[-100:]
-
-
 def get_preview_points(
     perception_dict: Dict[str, Any],
     max_points: int = DEFAULT_PREVIEW_POINTS,
@@ -91,7 +31,7 @@ def get_preview_points(
     min_confidence: float = 0.0,
 ) -> Dict[str, Any]:
     """
-    Filter and downsample points specifically for WebGL/Plotly visualization.
+    Filter and downsample points specifically for WebGL/3D visualization.
     Never alters original perception data used by mapping.
 
     Returns:

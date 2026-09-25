@@ -1,0 +1,111 @@
+/* Dashboard technical styling, radar glows, and telemetry grid */
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #050811;
+  --bg-panel: #0a0f1d;
+  --bg-panel-header: #0f172a;
+  --bg-surface: #111a2e;
+  --border-subtle: #1e293b;
+  --border-active: #3b82f6;
+  --border-glow: rgba(59, 130, 246, 0.4);
+
+  --color-road: #804080;
+  --color-sidewalk: #f52496;
+  --color-building: #595959;
+  --color-vegetation: #389938;
+  --color-vehicle: #3380e6;
+  --color-pedestrian: #e62626;
+  --color-polesign: #ffd91a;
+  --color-other: #a6a6a6;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+/* Monospace font for telemetry digits */
+.font-mono-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-feature-settings: "tnum";
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #070b14;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}
+
+/* Technical panel cards */
+.tech-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  transition: border-color 0.15s ease;
+}
+.tech-card:hover {
+  border-color: #2e3d54;
+}
+
+.tech-header {
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 29, 0.95) 100%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Glowing active badge */
+.badge-live {
+  position: relative;
+}
+.badge-live::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+  50% { opacity: 0.4; transform: translateY(-50%) scale(0.8); }
+}
+
+/* Glass overlay buttons */
+.hud-btn {
+  background: rgba(10, 15, 29, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  color: #94a3b8;
+  transition: all 0.15s ease;
+}
+.hud-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+.hud-btn.active {
+  background: rgba(37, 99, 235, 0.25);
+  color: #60a5fa;
+  border-color: #3b82f6;
+}

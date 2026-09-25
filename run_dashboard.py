@@ -1,14 +1,16 @@
 """
-Launcher script for the Adaptive Variable-Resolution 2.5D LiDAR Mapping Dashboard.
+Launcher script for the Adaptive Variable-Resolution 2.5D LiDAR Mapping Workstation.
+
+Launches the FastAPI backend (http://127.0.0.1:8000) and React + Three.js WebGL dashboard (http://localhost:3000).
 
 Usage:
-    # Run full system (FastAPI backend + Streamlit dashboard):
+    # Run full workstation (FastAPI backend + React frontend):
     python run_dashboard.py
 
     # Run FastAPI backend only:
     python run_dashboard.py --backend-only
 
-    # Run Streamlit frontend only:
+    # Run React frontend only:
     python run_dashboard.py --frontend-only
 """
 
@@ -60,34 +62,15 @@ def start_backend() -> subprocess.Popen:
 
 def start_react_frontend() -> int:
     """Launch React + Three.js engineering simulator."""
-    print("[Launcher] Starting React + Three.js LiDAR simulator on http://localhost:3000 ...")
+    print("[Launcher] Starting React + Three.js LiDAR Workstation on http://localhost:3000 ...")
     cmd = ["npm", "run", "dev"]
     return subprocess.call(cmd, cwd=str(PROJECT_ROOT / "frontend"), shell=True)
 
 
-def start_frontend() -> int:
-    """Launch Streamlit frontend."""
-    print("[Launcher] Starting Streamlit engineering dashboard on http://localhost:8501 ...")
-    cmd = [
-        sys.executable,
-        "-m",
-        "streamlit",
-        "run",
-        str(PROJECT_ROOT / "src" / "frontend" / "app.py"),
-        "--server.port",
-        "8501",
-        "--server.headless",
-        "true",
-    ]
-    return subprocess.call(cmd, cwd=str(PROJECT_ROOT))
-
-
 def main() -> None:
-    parser = argparse.ArgumentParser(description="LiDAR Mapping Dashboard Launcher")
+    parser = argparse.ArgumentParser(description="LiDAR Mapping Workstation Launcher")
     parser.add_argument("--backend-only", action="store_true", help="Launch FastAPI backend only")
-    parser.add_argument("--frontend-only", action="store_true", help="Launch frontend only")
-    parser.add_argument("--react", action="store_true", help="Launch React + Three.js simulator")
-    parser.add_argument("--streamlit", action="store_true", help="Launch Streamlit dashboard")
+    parser.add_argument("--frontend-only", action="store_true", help="Launch React frontend only")
     args = parser.parse_args()
 
     if args.backend_only:
@@ -100,25 +83,9 @@ def main() -> None:
         return
 
     if args.frontend_only:
-        if args.streamlit:
-            sys.exit(start_frontend())
         sys.exit(start_react_frontend())
 
-    if args.react:
-        backend_proc = None
-        if not is_backend_running():
-            backend_proc = start_backend()
-        else:
-            print("[Launcher] Backend is already running on port 8000.")
-        try:
-            start_react_frontend()
-        finally:
-            if backend_proc is not None:
-                print("[Launcher] Terminating backend subprocess...")
-                backend_proc.terminate()
-        return
-
-    # Default: Start backend if not already running, then launch frontend
+    # Default: Start backend if not already running, then launch React frontend
     backend_proc = None
     if not is_backend_running():
         backend_proc = start_backend()
@@ -126,7 +93,7 @@ def main() -> None:
         print("[Launcher] Backend is already running on port 8000.")
 
     try:
-        start_frontend()
+        start_react_frontend()
     finally:
         if backend_proc is not None:
             print("[Launcher] Terminating backend subprocess...")

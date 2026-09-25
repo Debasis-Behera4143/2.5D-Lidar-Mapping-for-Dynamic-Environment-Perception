@@ -178,6 +178,31 @@ def test_preprocessing():
     assert len(sampled_lbls) == 10
 
 
+def test_full_frame_inference_contract_uses_real_point_count():
+    segmenter = SemanticSegmenter(model_path=None, num_points=None, device='cpu')
+    assert segmenter.num_points is None
+
+    fake_points = np.array([
+        [1.0, 1.0, 0.0, 0.5],
+        [2.0, 2.0, 0.0, 0.4],
+        [3.0, 3.0, 0.0, 0.3],
+    ], dtype=np.float32)
+    fake_labels = np.array([0, 1, 2], dtype=np.int64)
+
+    result = segmenter.predict_points(fake_points, labels=fake_labels, frame_id='000001', interpolate_to_full=False)
+    assert result["points"].shape[0] == fake_points.shape[0]
+    assert result["ground_truth_labels"].shape[0] == fake_points.shape[0]
+    assert result["points"].dtype == np.float32
+
+
+def test_inference_request_allows_full_frame_payload_without_4096_cap():
+    from src.backend.schemas.inference import InferenceRequest
+
+    req = InferenceRequest(bin_path='data/semantic_kitti/sequences/00/velodyne/000000.bin')
+    assert req.num_points is None
+    assert req.preview_points_limit > 0
+
+
 # ============================================================================
 # 5. PyTorch Dataset and DataLoader Tests
 # ============================================================================

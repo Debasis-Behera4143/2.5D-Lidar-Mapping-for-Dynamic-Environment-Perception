@@ -7,7 +7,7 @@ visualization downsampling limits, and canonical color palettes.
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # Project Root
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -21,7 +21,7 @@ DEFAULT_BASE_RESOLUTION: float = 1.00       # Coarse cell resolution in meters
 DEFAULT_FINE_RESOLUTION: float = 0.25       # Fine cell resolution in meters
 DEFAULT_IMPORTANCE_THRESHOLD: float = 0.50  # Cutoff to trigger coarse->fine cell subdivision
 DEFAULT_DYNAMIC_THRESHOLD: float = 0.25     # Point displacement threshold (meters)
-DEFAULT_NUM_POINTS: int = 4096              # Default subsampled point cloud size for inference
+DEFAULT_NUM_POINTS: Optional[int] = None    # Keep full LiDAR frames unless a specific model limit is required
 DEFAULT_PREVIEW_POINTS: int = 4000          # Downsampling limit for interactive 3D WebGL rendering
 
 # 8 Canonical Project Semantic Classes with unified technical palettes

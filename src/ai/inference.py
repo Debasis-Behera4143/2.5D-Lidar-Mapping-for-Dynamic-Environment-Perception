@@ -31,7 +31,7 @@ class SemanticSegmenter:
         self,
         model_path: Optional[Union[str, Path]] = None,
         num_classes: int = NUM_CLASSES,
-        num_points: int = 4096,
+        num_points: Optional[int] = None,
         k_neighbors: int = 16,
         device: Optional[str] = None,
     ):
@@ -120,26 +120,20 @@ class SemanticSegmenter:
             if np.max(raw_lbls) > 7:
                 raw_lbls = map_raw_to_project_labels(raw_lbls)
 
-        if interpolate_to_full:
-            # 1. Clean full point cloud without random downsampling
-            clean_pts, clean_lbls, _ = PointCloudPreprocessor.remove_invalid_points(pts_4d, raw_lbls)
-            clean_pts, clean_lbls, _ = PointCloudPreprocessor.filter_by_range(
-                clean_pts, clean_lbls, min_range=self.preprocessor.min_range, max_range=self.preprocessor.max_range
-            )
-            if self.preprocessor.roi_bounds is not None:
-                clean_pts, clean_lbls, _ = PointCloudPreprocessor.crop_roi(
-                    clean_pts, clean_lbls, roi=self.preprocessor.roi_bounds
+        clean_pts, clean_lbls, _ = PointCloudPreprocessor.remove_invalid_points(pts_4d, raw_lbls)
+        if len(clean_pts) == 0:
+            raise ValueError("No valid points remaining after preprocessing filters.")
+
+        if interpolate_to_full or self.num_points is None:
+            # Keep the full valid frame in the response while using a bounded model sample for inference.
+            sample_target = min(len(clean_pts), 32768) if self.num_points is None else self.num_points
+            if len(clean_pts) > sample_target:
+                sampled_pts, sampled_lbls, _ = PointCloudPreprocessor.sample_points(
+                    clean_pts, clean_lbls, target_points=sample_target, random_seed=42
                 )
+            else:
+                sampled_pts, sampled_lbls = clean_pts, clean_lbls
 
-            if len(clean_pts) == 0:
-                raise ValueError("No valid points remaining after preprocessing filters.")
-
-            # 2. Subsample to num_points for model forward pass
-            sampled_pts, sampled_lbls, _ = PointCloudPreprocessor.sample_points(
-                clean_pts, clean_lbls, target_points=self.num_points, random_seed=42
-            )
-
-            # 3. Model forward pass on sampled points
             xyz_tensor = torch.from_numpy(sampled_pts[:, :3]).unsqueeze(0).float().to(self.device)
             feat_tensor = torch.from_numpy(sampled_pts).unsqueeze(0).permute(0, 2, 1).float().to(self.device)
 
@@ -151,57 +145,56 @@ class SemanticSegmenter:
             sampled_preds = preds[0].cpu().numpy().astype(np.int64)
             sampled_conf = confidence[0].cpu().numpy().astype(np.float32)
 
-            # 4. Dense 1-NN KDTree interpolation back to all clean points
-            from scipy.spatial import cKDTree
-            tree = cKDTree(sampled_pts[:, :3])
-            _, nn_indices = tree.query(clean_pts[:, :3], k=1, workers=1)
+            if len(clean_pts) > sample_target:
+                from scipy.spatial import cKDTree
+                tree = cKDTree(sampled_pts[:, :3])
+                _, nn_indices = tree.query(clean_pts[:, :3], k=1, workers=1)
+                result_preds = sampled_preds[nn_indices]
+                result_conf = sampled_conf[nn_indices]
+            else:
+                result_preds = sampled_preds
+                result_conf = sampled_conf
 
-            full_preds = sampled_preds[nn_indices]
-            full_conf = sampled_conf[nn_indices]
-
-            result: Dict[str, Any] = {
+            result = {
                 "points": clean_pts,
-                "predicted_labels": full_preds,
-                "confidence_scores": full_conf,
+                "predicted_labels": result_preds,
+                "confidence_scores": result_conf,
                 "frame_id": str(frame_id),
             }
             if clean_lbls is not None:
                 result["ground_truth_labels"] = clean_lbls
-
             return result
-        else:
-            # Standard downsampled perception pipeline
-            processed_pts, processed_lbls = self.preprocessor.process(pts_4d, raw_lbls, random_seed=42)
 
-            if len(processed_pts) < self.num_points:
-                processed_pts, processed_lbls, _ = PointCloudPreprocessor.sample_points(
-                    processed_pts,
-                    processed_lbls,
-                    target_points=self.num_points,
-                    random_seed=42,
-                )
+        processed_pts, processed_lbls = self.preprocessor.process(pts_4d, raw_lbls, random_seed=42)
+        if self.num_points is not None and len(processed_pts) > self.num_points:
+            processed_pts, processed_lbls, _ = PointCloudPreprocessor.sample_points(
+                processed_pts,
+                processed_lbls,
+                target_points=self.num_points,
+                random_seed=42,
+            )
 
-            xyz_tensor = torch.from_numpy(processed_pts[:, :3]).unsqueeze(0).float().to(self.device)
-            feat_tensor = torch.from_numpy(processed_pts).unsqueeze(0).permute(0, 2, 1).float().to(self.device)
+        xyz_tensor = torch.from_numpy(processed_pts[:, :3]).unsqueeze(0).float().to(self.device)
+        feat_tensor = torch.from_numpy(processed_pts).unsqueeze(0).permute(0, 2, 1).float().to(self.device)
 
-            with torch.no_grad():
-                logits = self.model(xyz_tensor, feat_tensor)  # (1, num_classes, N)
-                probs = F.softmax(logits, dim=1)              # (1, num_classes, N)
-                confidence, preds = torch.max(probs, dim=1)   # (1, N) each
+        with torch.no_grad():
+            logits = self.model(xyz_tensor, feat_tensor)  # (1, num_classes, N)
+            probs = F.softmax(logits, dim=1)              # (1, num_classes, N)
+            confidence, preds = torch.max(probs, dim=1)   # (1, N) each
 
-            predicted_labels = preds[0].cpu().numpy().astype(np.int64)
-            confidence_scores = confidence[0].cpu().numpy().astype(np.float32)
+        predicted_labels = preds[0].cpu().numpy().astype(np.int64)
+        confidence_scores = confidence[0].cpu().numpy().astype(np.float32)
 
-            result = {
-                "points": processed_pts,
-                "predicted_labels": predicted_labels,
-                "confidence_scores": confidence_scores,
-                "frame_id": str(frame_id),
-            }
-            if processed_lbls is not None:
-                result["ground_truth_labels"] = processed_lbls
+        result = {
+            "points": processed_pts,
+            "predicted_labels": predicted_labels,
+            "confidence_scores": confidence_scores,
+            "frame_id": str(frame_id),
+        }
+        if processed_lbls is not None:
+            result["ground_truth_labels"] = processed_lbls
 
-            return result
+        return result
 
     def predict_file(
         self,

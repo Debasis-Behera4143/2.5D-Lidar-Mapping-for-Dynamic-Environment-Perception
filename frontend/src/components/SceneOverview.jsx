@@ -1,164 +1,239 @@
-import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
-import { Layers, Cpu, Grid } from 'lucide-react';
+/**
+ * SceneOverview.jsx
+ * Left Column Pipeline Stack matching the reference screenshot:
+ * 1. Scene Overview (Live raw LiDAR point preview thumbnail)
+ * 2. AI Semantic Segmentation (RandLA-Net, labels, confidence)
+ * 3. Adaptive Grid + 2.5D Mapping (Variable resolution, sliders, UPDATE button)
+ */
 
-export default function SceneOverview({ points = [] }) {
-  const mountRef = useRef(null);
+import React, { useRef, useEffect } from 'react';
+import { Brain, Layers, ArrowDown, Sliders } from 'lucide-react';
+import { CLASS_COLORS } from '../config/constants';
 
+export default function SceneOverview({
+  frameId = '000000',
+  pointCount = 0,
+  points = [],
+  labels = [],
+  baseResolution = 1.0,
+  fineResolution = 0.25,
+  importanceThreshold = 0.5,
+  onChangeBaseRes,
+  onChangeFineRes,
+  onChangeThreshold,
+  onUpdateAdaptiveMap,
+  isUpdatingMap = false,
+}) {
+  const canvasRef = useRef(null);
+
+  // Render actual 2D/3D raw LiDAR point cloud projection in the mini canvas
   useEffect(() => {
-    const container = mountRef.current;
-    if (!container) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
 
-    let width = container.clientWidth || 180;
-    const height = 120;
+    // Clear background
+    ctx.fillStyle = '#030712';
+    ctx.fillRect(0, 0, width, height);
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050913);
+    // Draw grid radar circles
+    ctx.strokeStyle = '#0f223d';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(width / 2, height / 2, 20, 0, Math.PI * 2);
+    ctx.arc(width / 2, height / 2, 40, 0, Math.PI * 2);
+    ctx.arc(width / 2, height / 2, 60, 0, Math.PI * 2);
+    ctx.stroke();
 
-    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100);
-    camera.position.set(-1.0, -12.0, 9.0);
-    camera.lookAt(0, 8, 1);
+    if (!points || points.length === 0) {
+      // Placeholder dots if no points loaded yet
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '9px monospace';
+      ctx.fillText('Loading Scan...', width / 2 - 35, height / 2);
+      return;
+    }
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.domElement.style.touchAction = 'none';
-    container.innerHTML = '';
-    container.appendChild(renderer.domElement);
+    // Project points (X = forward 0..60, Y = lateral -20..20) onto canvas
+    const sampleStep = Math.max(1, Math.floor(points.length / 500));
+    const cx = width / 2;
+    const cy = height * 0.65;
+    const scale = 1.8;
 
-    // Build mini point cloud geometry
-    const step = Math.max(1, Math.floor(points.length / 800));
-    const sampled = points.filter((_, idx) => idx % step === 0);
+    for (let i = 0; i < points.length; i += sampleStep) {
+      const pt = points[i];
+      const lbl = labels[i] !== undefined ? labels[i] : 7;
+      const col = CLASS_COLORS[lbl] || '#38bdf8';
 
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(sampled.length * 3);
-    const colors = new Float32Array(sampled.length * 3);
+      // Three.js / KITTI projection: pt[1] lateral (-Y), pt[0] forward (X)
+      const px = cx + (pt[1] || 0) * scale;
+      const py = cy - (pt[0] || 0) * scale * 0.8;
 
-    sampled.forEach((pt, i) => {
-      positions[i * 3] = pt[1];      // Lateral Y -> Three X
-      positions[i * 3 + 1] = pt[2];  // Height Z -> Three Y
-      positions[i * 3 + 2] = -pt[0]; // Forward X -> Three -Z
-
-      // Height Turbo-style tint
-      const h = Math.max(0, Math.min(1, pt[2] / 4.0));
-      colors[i * 3] = 0.1 + h * 0.9;
-      colors[i * 3 + 1] = 0.8 - h * 0.4;
-      colors[i * 3 + 2] = 1.0 - h * 0.8;
-    });
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    const material = new THREE.PointsMaterial({
-      size: 1.8,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.85,
-    });
-
-    const pointCloud = new THREE.Points(geometry, material);
-    scene.add(pointCloud);
-
-    // Continuous slow orbit animation for vivid visualization
-    let animationId;
-    let angle = 0;
-    const animate = () => {
-      animationId = requestAnimationFrame(animate);
-      angle += 0.006;
-      camera.position.x = Math.sin(angle) * 3;
-      camera.lookAt(0, 10, 1);
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        width = entry.contentRect.width;
-        if (width > 0) {
-          camera.aspect = width / height;
-          camera.updateProjectionMatrix();
-          renderer.setSize(width, height);
-        }
+      if (px >= 0 && px < width && py >= 0 && py < height) {
+        ctx.fillStyle = col;
+        ctx.fillRect(px, py, 1.2, 1.2);
       }
-    });
-    ro.observe(container);
+    }
 
-    return () => {
-      cancelAnimationFrame(animationId);
-      ro.disconnect();
-      renderer.dispose();
-      geometry.dispose();
-      material.dispose();
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
-      }
-    };
-  }, [points]);
+    // Ego vehicle marker at center
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cx - 2, cy - 3, 4, 6);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 2, cy - 3, 4, 6);
+  }, [points, labels, frameId]);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-2 w-full">
-      {/* 1. Scene Overview Card */}
-      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 shadow-md flex flex-col justify-between">
-        <div>
-          <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
-            <Layers className="w-3.5 h-3.5 text-[#00d4ff]" />
-            <span>Scene Overview</span>
-          </div>
-          <div ref={mountRef} className="w-full h-[120px] rounded bg-[#050913] border border-[#132035] overflow-hidden" />
+    <div className="w-[200px] shrink-0 flex flex-col gap-2 select-none overflow-y-auto pr-0.5">
+      {/* 1. Scene Overview & Raw Point Cloud Thumbnail */}
+      <div className="bg-[#071123] border border-[#162744] rounded-lg p-2 flex flex-col">
+        <div className="text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+          <span>Scene Overview</span>
+          <span className="text-[9px] font-mono text-[#7896bf] bg-[#0a1830] px-1.5 py-0.5 rounded">
+            Frame: {frameId}
+          </span>
         </div>
-        <div className="text-[10px] text-[#94a3b8] text-center mt-1.5 font-medium">
+
+        <div className="w-full h-20 rounded bg-[#030712] border border-[#1b3156] relative overflow-hidden flex items-center justify-center">
+          <canvas
+            ref={canvasRef}
+            width={190}
+            height={80}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute bottom-1 text-[8px] font-mono text-[#7896bf] px-1 bg-[#050b18]/85 rounded">
+            Points: {pointCount > 0 ? pointCount.toLocaleString() : 'Loading'}
+          </div>
+        </div>
+        <div className="text-[9px] text-[#5d7d9f] font-medium text-center mt-1">
           Raw LiDAR Point Cloud (3D)
         </div>
       </div>
 
-      {/* 2. AI Semantic Segmentation Card */}
-      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 shadow-md flex flex-col justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
-          <Cpu className="w-3.5 h-3.5 text-[#3b82f6]" />
-          <span>AI Semantic Segmentation</span>
+      {/* Down Arrow 1 */}
+      <div className="flex justify-center -my-1 text-[#3b82f6]">
+        <ArrowDown className="w-3.5 h-3.5 animate-bounce" />
+      </div>
+
+      {/* 2. AI Semantic Segmentation */}
+      <div className="bg-[#071123] border border-[#162744] rounded-lg p-2">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <div className="w-4 h-4 rounded bg-[#132c54] flex items-center justify-center text-[#38bdf8]">
+            <Brain className="w-3 h-3" />
+          </div>
+          <span className="text-[11px] font-bold text-white tracking-tight">AI Semantic Segmentation</span>
         </div>
-        <div className="space-y-1.5 text-[11px] text-[#cbd5e1] my-auto py-2">
+        <div className="space-y-1 text-[10px] text-[#93a9c7]">
           <div className="flex items-center gap-1.5">
-            <span className="text-emerald-400 font-bold">✓</span>
-            <span>Terrain classification</span>
+            <span className="text-cyan-400 font-bold">✓</span>
+            <span>Semantic Classification</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-emerald-400 font-bold">✓</span>
-            <span>Object detection</span>
+            <span className="text-cyan-400 font-bold">✓</span>
+            <span>Semantic Labels (8 classes)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-emerald-400 font-bold">✓</span>
-            <span>Semantic labels</span>
+            <span className="text-cyan-400 font-bold">✓</span>
+            <span>Confidence Scoring</span>
           </div>
         </div>
-        <div className="text-[10px] text-[#38bdf8] text-center font-medium bg-[#0d172a] py-0.5 rounded border border-[#1e293b]">
-          RandLA-Net Backbone
+        <div className="mt-1.5 pt-1 border-t border-[#142642] flex justify-between items-center text-[9px] font-mono">
+          <span className="text-[#5d7d9f]">Model:</span>
+          <span className="text-cyan-400 font-bold">RandLA-Net</span>
         </div>
       </div>
 
-      {/* 3. Adaptive Grid + 2.5D Mapping Card */}
-      <div className="bg-[#09101f] border border-[#172742] rounded-md p-2.5 shadow-md flex flex-col justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
-          <Grid className="w-3.5 h-3.5 text-[#10b981]" />
-          <span>Adaptive Grid + 2.5D Mapping</span>
+      {/* Down Arrow 2 */}
+      <div className="flex justify-center -my-1 text-[#3b82f6]">
+        <ArrowDown className="w-3.5 h-3.5 animate-bounce" />
+      </div>
+
+      {/* 3. Adaptive Grid + 2.5D Mapping */}
+      <div className="bg-[#071123] border border-[#162744] rounded-lg p-2 flex flex-col gap-1.5">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <div className="w-4 h-4 rounded bg-[#132c54] flex items-center justify-center text-[#38bdf8]">
+            <Layers className="w-3 h-3" />
+          </div>
+          <span className="text-[11px] font-bold text-white tracking-tight">Adaptive Grid + 2.5D Mapping</span>
         </div>
-        <div className="space-y-1.5 text-[11px] text-[#cbd5e1] my-auto py-2">
+        <div className="space-y-0.5 text-[9.5px] text-[#93a9c7]">
           <div className="flex items-center gap-1.5">
-            <span className="text-emerald-400 font-bold">✓</span>
-            <span>Variable resolution</span>
+            <span className="text-cyan-400 font-bold">✓</span>
+            <span>Variable Resolution</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-emerald-400 font-bold">✓</span>
-            <span>Elevation map</span>
+            <span className="text-cyan-400 font-bold">✓</span>
+            <span>Elevation Map</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-emerald-400 font-bold">✓</span>
-            <span>Semantic layers</span>
+            <span className="text-cyan-400 font-bold">✓</span>
+            <span>Semantic Layers</span>
           </div>
         </div>
-        <div className="text-[10px] text-[#10b981] text-center font-medium bg-[#0d172a] py-0.5 rounded border border-[#1e293b]">
-          Octree / Quadtree Fusion
+
+        {/* Controls */}
+        <div className="space-y-1.5 pt-1.5 border-t border-[#142642] text-[9px] font-mono text-[#7e9bbd]">
+          {/* Base Res */}
+          <div>
+            <div className="flex justify-between">
+              <span>Base Res:</span>
+              <span className="text-white font-bold">{baseResolution.toFixed(2)} m</span>
+            </div>
+            <input
+              type="range"
+              min="0.50"
+              max="2.00"
+              step="0.10"
+              value={baseResolution}
+              onChange={(e) => onChangeBaseRes && onChangeBaseRes(parseFloat(e.target.value))}
+              className="w-full h-1 bg-[#162744] rounded-lg appearance-none cursor-pointer accent-cyan-400"
+            />
+          </div>
+
+          {/* Fine Res */}
+          <div>
+            <div className="flex justify-between">
+              <span>Fine Res:</span>
+              <span className="text-white font-bold">{fineResolution.toFixed(2)} m</span>
+            </div>
+            <input
+              type="range"
+              min="0.05"
+              max="0.50"
+              step="0.05"
+              value={fineResolution}
+              onChange={(e) => onChangeFineRes && onChangeFineRes(parseFloat(e.target.value))}
+              className="w-full h-1 bg-[#162744] rounded-lg appearance-none cursor-pointer accent-cyan-400"
+            />
+          </div>
+
+          {/* Threshold */}
+          <div>
+            <div className="flex justify-between">
+              <span>Importance Thresh:</span>
+              <span className="text-white font-bold">{importanceThreshold.toFixed(2)}</span>
+            </div>
+            <input
+              type="range"
+              min="0.10"
+              max="0.90"
+              step="0.05"
+              value={importanceThreshold}
+              onChange={(e) => onChangeThreshold && onChangeThreshold(parseFloat(e.target.value))}
+              className="w-full h-1 bg-[#162744] rounded-lg appearance-none cursor-pointer accent-cyan-400"
+            />
+          </div>
         </div>
+
+        {/* Update 2.5D Adaptive Map Button */}
+        <button
+          onClick={onUpdateAdaptiveMap}
+          disabled={isUpdatingMap}
+          className="w-full mt-1 py-1 px-2 rounded bg-gradient-to-r from-[#1d4ed8] to-[#0284c7] hover:from-[#2563eb] hover:to-[#0ea5e9] text-white font-bold text-[9.5px] uppercase tracking-wider shadow-md shadow-blue-900/30 transition active:scale-95 disabled:opacity-50"
+        >
+          {isUpdatingMap ? 'UPDATING MAP...' : 'UPDATE 2.5D ADAPTIVE MAP'}
+        </button>
       </div>
     </div>
   );

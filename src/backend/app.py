@@ -43,12 +43,14 @@ app.add_middleware(
 )
 
 from src.backend.routes.simulation import router as simulation_router
+from src.backend.routes.perception import router as perception_router
 
 # Register route modules
 app.include_router(health_router)
 app.include_router(taxonomy_router)
 app.include_router(samples_router)
 app.include_router(inference_router)
+app.include_router(perception_router)
 app.include_router(mapping_router)
 app.include_router(simulation_router)
 

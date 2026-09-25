@@ -103,12 +103,18 @@ export default function Three25DElevationViewer({
     ]);
     scene.add(new THREE.Line(baseLineGeo, baseLineMat));
 
-    // 8. Animation Loop
+    // 8. Animation Loop with render-on-demand
     let animId;
+    let needsRender = true;
+    controls.addEventListener('change', () => { needsRender = true; });
+
     const animate = () => {
       animId = requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
+      const isMoving = controls.update();
+      if (isMoving || needsRender) {
+        renderer.render(scene, camera);
+        needsRender = false;
+      }
     };
     animate();
 
@@ -120,6 +126,7 @@ export default function Three25DElevationViewer({
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      needsRender = true;
     };
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(container);
@@ -253,6 +260,9 @@ export default function Three25DElevationViewer({
 
     scene.add(instMesh);
     instancedMeshRef.current = instMesh;
+    if (rendererRef.current && cameraRef.current) {
+      rendererRef.current.render(scene, cameraRef.current);
+    }
   }, [points, labels, colorMode]);
 
   // Handle Preset Camera Changes
@@ -274,6 +284,10 @@ export default function Three25DElevationViewer({
       // Top-Down BEV Elevation Heatmap
       camera.position.set(0.0, 26.0, 0.01);
       controls.target.set(0.0, 0.0, 0.0);
+    }
+    controls.update();
+    if (rendererRef.current && sceneRef.current) {
+      rendererRef.current.render(sceneRef.current, camera);
     }
   };
 
