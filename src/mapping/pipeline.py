@@ -92,6 +92,8 @@ def generate_adaptive_map(
             val_curr.predicted_labels,
             val_prev.predicted_labels,
             movement_config,
+            current_pose=val_curr.pose,
+            previous_pose=val_prev.pose,
         )
 
     mapper = AdaptiveGridMapper(config, importance_config)
@@ -176,6 +178,8 @@ def process_frame(
         val_curr.predicted_labels,
         val_prev.predicted_labels if val_prev is not None else None,
         config.movement,
+        current_pose=val_curr.pose if val_curr is not None else None,
+        previous_pose=val_prev.pose if val_prev is not None else None,
     )
 
     # 3. Uniform grid mapping

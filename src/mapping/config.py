@@ -64,6 +64,7 @@ class MovementConfig:
     """Configuration for frame-to-frame geometric movement estimation."""
     threshold: float = 0.25         # Displacement distance threshold in meters for moving points
     max_search_radius: float = 3.0  # Max KDTree radius query in meters
+    use_ego_compensation: bool = True  # Transform point clouds into common coordinate frame if poses available
 
 
 @dataclass
