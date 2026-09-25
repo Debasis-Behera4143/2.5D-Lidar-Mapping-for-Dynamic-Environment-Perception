@@ -58,6 +58,41 @@ class LiDARLoader:
         return points
 
     @staticmethod
+    def load_poses(
+        poses_path: Union[str, Path],
+    ) -> np.ndarray:
+        """
+        Load a SemanticKITTI poses.txt file containing 3x4 or 4x4 rigid transformation matrices.
+
+        Args:
+            poses_path: Path to poses.txt file.
+
+        Returns:
+            np.ndarray: Array of shape (F, 4, 4) with dtype float32 representing 4x4 sensor-to-world pose matrices.
+        """
+        path = Path(poses_path)
+        if not path.is_file():
+            raise FileNotFoundError(f"Poses file not found: {path.resolve()}")
+
+        poses_raw = np.loadtxt(str(path), dtype=np.float32)
+        if poses_raw.ndim == 1:
+            poses_raw = poses_raw.reshape(1, -1)
+
+        num_frames = len(poses_raw)
+        poses = np.zeros((num_frames, 4, 4), dtype=np.float32)
+        poses[:, 3, 3] = 1.0
+
+        for i, row in enumerate(poses_raw):
+            if len(row) == 12:
+                poses[i, :3, :4] = row.reshape(3, 4)
+            elif len(row) == 16:
+                poses[i] = row.reshape(4, 4)
+            else:
+                raise ValueError(f"Invalid pose row length {len(row)}, expected 12 or 16 numbers.")
+
+        return poses
+
+    @staticmethod
     def compute_statistics(points: np.ndarray) -> Dict[str, Union[int, Tuple[float, float], Dict[str, float]]]:
         """
         Compute descriptive spatial statistics for a LiDAR point cloud.
