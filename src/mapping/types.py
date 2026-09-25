@@ -38,6 +38,7 @@ class ValidatedInput:
     frame_id: str
     ground_truth_labels: Optional[np.ndarray] = None  # (N,) int64 in [0, 7]
     intensity: Optional[np.ndarray] = None            # (N,) float32
+    pose: Optional[np.ndarray] = None                 # (4, 4) or (3, 4) sensor pose matrix
 
     @property
     def point_count(self) -> int:
@@ -156,6 +157,19 @@ def validate_input_payload(payload: Dict[str, Any]) -> ValidatedInput:
     elif points.shape[1] == 4:
         intensity = points[:, 3]
 
+    # 6. Optional pose matrix
+    pose = None
+    if "pose" in payload and payload["pose"] is not None:
+        try:
+            raw_pose = np.asarray(payload["pose"], dtype=np.float32)
+            if raw_pose.shape == (3, 4):
+                pose = np.eye(4, dtype=np.float32)
+                pose[:3, :4] = raw_pose
+            elif raw_pose.shape == (4, 4):
+                pose = raw_pose
+        except Exception:
+            pose = None
+
     return ValidatedInput(
         points=points,
         predicted_labels=labels,
@@ -163,4 +177,5 @@ def validate_input_payload(payload: Dict[str, Any]) -> ValidatedInput:
         frame_id=frame_id,
         ground_truth_labels=gt_labels,
         intensity=intensity,
+        pose=pose,
     )

@@ -211,6 +211,7 @@ def create_sample_dataset(
     velo_dir.mkdir(parents=True, exist_ok=True)
     labels_dir.mkdir(parents=True, exist_ok=True)
 
+    poses_lines = []
     for frame_idx in range(num_frames):
         frame_name = f"{frame_idx:06d}"
         bin_path = velo_dir / f"{frame_name}.bin"
@@ -221,6 +222,14 @@ def create_sample_dataset(
             seed=42 + frame_idx,
         )
         save_kitti_frame(pts, lbls, bin_path, label_path)
+
+        # Standard KITTI 3x4 pose matrix: identity rotation with forward translation along X
+        tx = float(frame_idx * 1.0)
+        pose_row = f"1.0 0.0 0.0 {tx:.4f} 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0"
+        poses_lines.append(pose_row)
+
+    poses_path = seq_dir / "poses.txt"
+    poses_path.write_text("\n".join(poses_lines) + "\n", encoding="utf-8")
 
     return output_dir
 
