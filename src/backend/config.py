@@ -4,12 +4,14 @@ Backend configuration module.
 Provides project-root-relative paths, checkpoint selection with fallback,
 data directory locations, device detection, and environment variable overrides.
 Does not use hardcoded absolute paths.
+
+IMPORTANT: torch is imported lazily inside functions to prevent blocking
+the application startup on memory-constrained environments (Render free tier).
 """
 
 import os
 from pathlib import Path
 from typing import List, Optional
-import torch
 
 
 # Project root relative to this file: src/backend/config.py -> 3 levels up
@@ -57,13 +59,14 @@ SAMPLE_DIRS: List[Path] = [
 ]
 
 
-def get_compute_device() -> torch.device:
+def get_compute_device():
     """
-    Select active compute device:
+    Select active compute device (lazy torch import to avoid blocking startup):
     1. Environment variable LIDAR_DEVICE if specified ('cuda' or 'cpu')
     2. CUDA if available
     3. CPU fallback
     """
+    import torch
     env_device = os.getenv("LIDAR_DEVICE")
     if env_device:
         return torch.device(env_device)

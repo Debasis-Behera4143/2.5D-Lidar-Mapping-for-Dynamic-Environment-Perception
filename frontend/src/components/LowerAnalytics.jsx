@@ -56,7 +56,7 @@ export function PerformanceMetricsGauges({
   ];
 
   return (
-    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none">
+    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none min-h-[100px] md:min-h-0">
       <div className="text-xs font-bold text-white mb-1.5 tracking-tight flex items-center justify-between">
         <span>Performance Metrics</span>
         <span className="text-[9px] font-mono text-[#5d7d9f]">
@@ -64,7 +64,7 @@ export function PerformanceMetricsGauges({
         </span>
       </div>
 
-      <div className="flex-1 grid grid-cols-4 gap-1.5 items-center">
+      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-1.5 items-center">
         {gauges.map((g) => {
           const radius = 22;
           const circumference = 2 * Math.PI * radius;
@@ -216,12 +216,12 @@ export function GridComparisonPanel({
  */
 export function FooterBar() {
   return (
-    <footer className="h-9 bg-[#040813] border-t border-[#14233c] px-4 flex items-center justify-between text-xs select-none shrink-0">
+    <footer className="min-h-9 bg-[#040813] border-t border-[#14233c] px-3 md:px-4 py-1.5 md:py-0 flex flex-col md:flex-row items-center justify-between text-xs select-none shrink-0 gap-1 md:gap-0">
       {/* What This Dashboard Shows */}
-      <div className="flex items-center gap-2">
-        <Target className="w-3.5 h-3.5 text-cyan-400" />
-        <span className="font-bold text-white text-[11px]">What This Dashboard Shows</span>
-        <span className="text-[10.5px] text-[#718eb3]">
+      <div className="flex items-center gap-2 text-center md:text-left">
+        <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+        <span className="font-bold text-white text-[10px] md:text-[11px]">What This Dashboard Shows</span>
+        <span className="hidden sm:inline text-[10.5px] text-[#718eb3]">
           A real-time view of the LiDAR scene, semantic understanding, adaptive 2.5D mapping and system performance.
         </span>
       </div>

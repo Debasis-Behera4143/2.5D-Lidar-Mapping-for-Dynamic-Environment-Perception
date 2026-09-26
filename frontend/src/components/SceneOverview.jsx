@@ -85,7 +85,7 @@ export default function SceneOverview({
   }, [points, labels, frameId]);
 
   return (
-    <div className="w-[200px] shrink-0 flex flex-col gap-2 select-none overflow-y-auto pr-0.5">
+    <div className="w-full md:w-[200px] shrink-0 flex flex-row md:flex-col flex-wrap md:flex-nowrap gap-2 select-none overflow-y-auto pr-0.5">
       {/* 1. Scene Overview & Raw Point Cloud Thumbnail */}
       <div className="bg-[#071123] border border-[#162744] rounded-lg p-2 flex flex-col">
         <div className="text-xs font-bold text-white mb-1.5 flex items-center justify-between">

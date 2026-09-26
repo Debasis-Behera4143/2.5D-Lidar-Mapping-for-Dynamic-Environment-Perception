@@ -23,24 +23,24 @@ export default function Header({
   onChangeSpeed,
 }) {
   return (
-    <header className="h-14 bg-[#050b18] border-b border-[#14233c] px-4 flex items-center justify-between z-30 select-none shrink-0">
+    <header className="min-h-14 bg-[#050b18] border-b border-[#14233c] px-3 md:px-4 py-2 md:py-0 flex flex-col md:flex-row items-center justify-between z-30 select-none shrink-0 gap-2 md:gap-0">
       {/* Left Branding */}
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-[#0e3b78] border border-[#1d5fb5] flex items-center justify-center shadow-lg shadow-blue-500/10">
-          <Car className="w-5 h-5 text-white" />
+      <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-[#0e3b78] border border-[#1d5fb5] flex items-center justify-center shadow-lg shadow-blue-500/10">
+          <Car className="w-4 h-4 md:w-5 md:h-5 text-white" />
         </div>
         <div>
-          <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-[11px] md:text-sm font-bold tracking-tight text-white flex items-center gap-2">
             ADAPTIVE 2.5D LiDAR PERCEPTION
           </h1>
-          <p className="text-[11px] text-[#7892b4] font-medium">
+          <p className="hidden sm:block text-[11px] text-[#7892b4] font-medium">
             Dynamic Environment Mapping &amp; Variable-Resolution Grid Pipeline
           </p>
         </div>
       </div>
 
       {/* Right Status & Controls */}
-      <div className="flex items-center gap-3 text-xs font-mono">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs font-mono w-full md:w-auto">
         {/* Backend Connected / Status Badge */}
         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold ${
           backendConnected
@@ -55,11 +55,11 @@ export default function Header({
         {onResetView && (
           <button
             onClick={onResetView}
-            className="flex items-center gap-1 px-2.5 py-1 rounded bg-[#09152b] border border-[#1a3258] hover:border-[#38bdf8] text-[#94a8c9] hover:text-white transition text-[11px]"
+            className="flex items-center gap-1 px-2 py-1 rounded bg-[#09152b] border border-[#1a3258] hover:border-[#38bdf8] text-[#94a8c9] hover:text-white transition text-[11px]"
             title="Reset 3D Camera View"
           >
             <RefreshCw className="w-3 h-3" />
-            <span>Reset View</span>
+            <span className="hidden sm:inline">Reset View</span>
           </button>
         )}
 
@@ -67,11 +67,11 @@ export default function Header({
         {onExport && (
           <button
             onClick={onExport}
-            className="flex items-center gap-1 px-2.5 py-1 rounded bg-[#09152b] border border-[#1a3258] hover:border-[#38bdf8] text-[#94a8c9] hover:text-white transition text-[11px]"
+            className="flex items-center gap-1 px-2 py-1 rounded bg-[#09152b] border border-[#1a3258] hover:border-[#38bdf8] text-[#94a8c9] hover:text-white transition text-[11px]"
             title="Export 2.5D Map Data"
           >
             <Download className="w-3 h-3" />
-            <span>Export</span>
+            <span className="hidden sm:inline">Export</span>
           </button>
         )}
 

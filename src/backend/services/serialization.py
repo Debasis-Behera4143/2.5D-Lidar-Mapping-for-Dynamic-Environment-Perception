@@ -4,12 +4,22 @@ Universal JSON-safety serialization service.
 Converts NumPy types, PyTorch tensors, Pydantic models, and nested structures
 into pure Python primitives (int, float, bool, str, list, dict) suitable for
 FastAPI JSON responses.
+
+torch is checked lazily via sys.modules to avoid forcing a top-level import.
 """
 
 from typing import Any
 import math
+import sys
 import numpy as np
-import torch
+
+
+def _is_torch_tensor(obj):
+    """Check if obj is a torch.Tensor without requiring torch at import time."""
+    torch_mod = sys.modules.get("torch")
+    if torch_mod is not None:
+        return isinstance(obj, torch_mod.Tensor)
+    return False
 
 
 def to_json_safe(obj: Any) -> Any:
@@ -27,8 +37,8 @@ def to_json_safe(obj: Any) -> Any:
     if obj is None or isinstance(obj, (str, bool)):
         return obj
 
-    # 2. PyTorch Tensor
-    if isinstance(obj, torch.Tensor):
+    # 2. PyTorch Tensor (lazy check)
+    if _is_torch_tensor(obj):
         return to_json_safe(obj.detach().cpu().numpy())
 
     # 3. NumPy scalar values

@@ -102,7 +102,7 @@ export function AdaptiveGridResolution({
   ];
 
   return (
-    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 select-none mt-2 flex flex-col gap-1.5">
+    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 select-none mt-2 md:mt-2 flex flex-col gap-1.5 w-full md:w-auto">
       <div className="text-xs font-bold text-white tracking-tight flex items-center justify-between">
         <span>Adaptive Grid Resolution</span>
         <Grid className="w-3.5 h-3.5 text-cyan-400" />

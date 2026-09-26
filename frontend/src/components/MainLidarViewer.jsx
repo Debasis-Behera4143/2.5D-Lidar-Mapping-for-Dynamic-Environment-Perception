@@ -509,17 +509,18 @@ export default function MainLidarViewer({
   }, [resetToken]);
 
   return (
-    <div className="relative flex-1 bg-[#040814] border border-[#14233c] rounded-lg overflow-hidden select-none flex flex-col">
+    <div className="relative flex-1 bg-[#040814] border border-[#14233c] rounded-lg overflow-hidden select-none flex flex-col h-[280px] md:h-auto min-h-[250px] md:min-h-0">
       {/* Top Header & Floating Toolbar */}
-      <div className="absolute top-2 left-3 right-3 z-10 flex items-center justify-between pointer-events-none">
-        <div className="text-xs font-bold text-white tracking-tight flex items-center gap-2 bg-[#050b18]/85 px-2.5 py-1 rounded border border-[#162744] backdrop-blur-sm pointer-events-auto">
-          <span>2.5D Semantic Elevation Map & 3D ADAS Digital Twin</span>
+      <div className="absolute top-2 left-2 right-2 md:top-2 md:left-3 md:right-3 z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-0 pointer-events-none">
+        <div className="text-[10px] md:text-xs font-bold text-white tracking-tight flex items-center gap-2 bg-[#050b18]/85 px-2 py-1 rounded border border-[#162744] backdrop-blur-sm pointer-events-auto">
+          <span className="hidden sm:inline">2.5D Semantic Elevation Map & 3D ADAS Digital Twin</span>
+          <span className="sm:hidden">3D Digital Twin</span>
         </div>
 
         {/* Top-Right Floating Camera & Settings Toolbar */}
-        <div className="flex items-center gap-1.5 bg-[#050b18]/85 p-1 rounded-md border border-[#162744] backdrop-blur-sm pointer-events-auto text-[10px] font-mono">
+        <div className="flex flex-wrap items-center gap-1 md:gap-1.5 bg-[#050b18]/85 p-1 rounded-md border border-[#162744] backdrop-blur-sm pointer-events-auto text-[10px] font-mono w-full md:w-auto">
           {/* Camera Preset Buttons */}
-          <div className="flex items-center gap-1 bg-[#0a1528] p-0.5 rounded border border-[#1a3258]">
+          <div className="flex items-center gap-1 bg-[#0a1528] p-0.5 rounded border border-[#1a3258] overflow-x-auto max-w-full scrollbar-none">
             <button
               onClick={() => setCameraMode('orbit')}
               className={`px-1.5 py-0.5 rounded ${
@@ -784,7 +785,7 @@ export default function MainLidarViewer({
       {/* CALLOUT BADGES WITH LEADER LINES */}
       {showCallouts && (
         <>
-          <div className="absolute top-11 left-6 pointer-events-none flex flex-col items-center">
+          <div className="hidden md:block absolute top-11 left-6 pointer-events-none flex flex-col items-center">
             <div className="bg-[#140608]/90 border border-[#ef4444] rounded px-2.5 py-1 text-center shadow-lg shadow-red-950/40 backdrop-blur-sm">
               <div className="text-[11px] font-bold text-white">Wall (Non-drivable)</div>
               <div className="text-[10px] text-[#fca5a5]">Height: ~2.5 m</div>
@@ -792,7 +793,7 @@ export default function MainLidarViewer({
             <div className="w-[1px] h-7 bg-gradient-to-b from-[#ef4444] to-transparent transform -rotate-12 origin-top" />
           </div>
 
-          <div className="absolute top-11 left-[36%] pointer-events-none flex flex-col items-center">
+          <div className="hidden md:block absolute top-11 left-[36%] pointer-events-none flex flex-col items-center">
             <div className="bg-[#180824]/90 border border-[#d946ef] rounded px-2.5 py-1 text-center shadow-lg shadow-fuchsia-950/40 backdrop-blur-sm">
               <div className="text-[11px] font-bold text-white">Vehicle (Dynamic)</div>
               <div className="text-[10px] text-[#f0abfc]">Height: ~1.5 m</div>
@@ -800,7 +801,7 @@ export default function MainLidarViewer({
             <div className="w-[1px] h-10 bg-gradient-to-b from-[#d946ef] to-transparent" />
           </div>
 
-          <div className="absolute top-11 right-16 pointer-events-none flex flex-col items-center">
+          <div className="hidden md:block absolute top-11 right-16 pointer-events-none flex flex-col items-center">
             <div className="bg-[#051c12]/90 border border-[#10b981] rounded px-2.5 py-1 text-center shadow-lg shadow-emerald-950/40 backdrop-blur-sm">
               <div className="text-[11px] font-bold text-white">Tree (Static)</div>
               <div className="text-[10px] text-[#6ee7b7]">Height: ~5 m</div>
@@ -808,7 +809,7 @@ export default function MainLidarViewer({
             <div className="w-[1px] h-9 bg-gradient-to-b from-[#10b981] to-transparent transform rotate-12 origin-top" />
           </div>
 
-          <div className="absolute top-[48%] right-8 pointer-events-none flex flex-col items-center">
+          <div className="hidden md:block absolute top-[48%] right-8 pointer-events-none flex flex-col items-center">
             <div className="bg-[#1f1905]/90 border border-[#eab308] rounded px-2.5 py-1 text-center shadow-lg shadow-amber-950/40 backdrop-blur-sm">
               <div className="text-[11px] font-bold text-white">Pedestrian (Dynamic)</div>
               <div className="text-[10px] text-[#fde047]">Height: ~1.7 m</div>
@@ -816,7 +817,7 @@ export default function MainLidarViewer({
             <div className="w-[1px] h-8 bg-gradient-to-b from-[#eab308] to-transparent transform -rotate-25 origin-top" />
           </div>
 
-          <div className="absolute bottom-6 right-20 pointer-events-none flex flex-col items-center">
+          <div className="hidden md:block absolute bottom-6 right-20 pointer-events-none flex flex-col items-center">
             <div className="bg-[#071933]/90 border border-[#1d64f2] rounded px-2.5 py-1 text-center shadow-lg shadow-blue-950/40 backdrop-blur-sm">
               <div className="text-[11px] font-bold text-white">Drivable Road</div>
               <div className="text-[10px] text-[#93c5fd]">Height: ~0.0 - 0.5 m</div>

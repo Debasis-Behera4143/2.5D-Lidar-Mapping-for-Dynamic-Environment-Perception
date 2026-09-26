@@ -12,7 +12,8 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PORT=10000
 
 RUN pip install --upgrade pip \
     && pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.0.0"
@@ -26,6 +27,6 @@ COPY data/sample_kitti ./data/sample_kitti
 COPY data/semantic_kitti ./data/semantic_kitti
 COPY --from=frontend-build /frontend/dist ./frontend/dist
 
-EXPOSE 8000
+EXPOSE 10000
 
-CMD ["uvicorn", "src.backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn src.backend.app:app --host 0.0.0.0 --port ${PORT}

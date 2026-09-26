@@ -7,15 +7,15 @@ device auto-detection, and JSON-safe perception contracts.
 
 NOTE: Current checkpoints are baseline prototype models; performance claims
 should be backed by empirical test evaluation.
+
+torch and model imports are deferred to load_model() to prevent blocking
+application startup on resource-constrained deployments.
 """
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
-import torch
 
-from src.ai.inference import SemanticSegmenter
-from src.ai.label_mapping import ID_TO_CLASS, NUM_CLASSES
 from src.backend.config import PROJECT_ROOT, get_checkpoint_path, get_compute_device
 from src.backend.services.serialization import to_json_safe
 from src.backend.utils.errors import (
@@ -39,15 +39,21 @@ class InferenceService:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, checkpoint_path: Optional[Path] = None, device: Optional[torch.device] = None):
+    def __init__(self, checkpoint_path: Optional[Path] = None, device=None):
         if getattr(self, "_initialized", False):
             return
 
         self.checkpoint_path = checkpoint_path or get_checkpoint_path()
-        self.device = device or get_compute_device()
-        self.segmenter: Optional[SemanticSegmenter] = None
+        self._device = device  # Lazily resolved when needed
+        self.segmenter = None
         self._model_loaded: bool = False
         self._initialized = True
+
+    @property
+    def device(self):
+        if self._device is None:
+            self._device = get_compute_device()
+        return self._device
 
     def is_loaded(self) -> bool:
         """True if model weights are loaded into memory."""
@@ -62,6 +68,9 @@ class InferenceService:
                 self.segmenter.num_points = num_points
                 self.segmenter.preprocessor.target_num_points = num_points
             return
+
+        from src.ai.inference import SemanticSegmenter
+        from src.ai.label_mapping import NUM_CLASSES
 
         ckpt = self.checkpoint_path
         if not ckpt.is_file():
@@ -107,6 +116,9 @@ class InferenceService:
             preview_points, and optional evaluation_information.
         """
         # Validate input path
+        import torch
+        from src.ai.label_mapping import ID_TO_CLASS
+
         path = Path(bin_path)
         if not path.is_absolute():
             path = PROJECT_ROOT / path

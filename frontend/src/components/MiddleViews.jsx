@@ -15,7 +15,7 @@ import Three25DElevationViewer from './Three25DElevationViewer';
  */
 export function SideFrontElevationView({ points = [], labels = [] }) {
   return (
-    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none relative overflow-hidden">
+    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none relative overflow-hidden min-h-[140px] md:min-h-0">
       <div className="text-xs font-bold text-white mb-1 tracking-tight flex items-center justify-between">
         <span>2.5D Elevation Map (Side/Front View)</span>
         <span className="text-[9px] font-mono text-[#5d7d9f]">Turbo Height</span>
@@ -56,7 +56,7 @@ export function SemanticMapTopView({
   }, [points, labels, adaptiveMap]);
 
   return (
-    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none">
+    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none min-h-[140px] md:min-h-0">
       <div className="text-xs font-bold text-white mb-1 tracking-tight flex items-center justify-between">
         <span>Semantic Map (Top View)</span>
         <span className="text-[9px] font-mono text-[#5d7d9f]">2D BEV</span>
@@ -162,7 +162,7 @@ export function ElevationProfileFrontView({
   }, [points, profileData]);
 
   return (
-    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none">
+    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none min-h-[140px] md:min-h-0">
       <div className="text-xs font-bold text-white mb-1 tracking-tight flex items-center justify-between">
         <span>Elevation Profile (Front View)</span>
         <span className="text-[9px] font-mono text-[#5d7d9f]">Max: {maxH}m</span>

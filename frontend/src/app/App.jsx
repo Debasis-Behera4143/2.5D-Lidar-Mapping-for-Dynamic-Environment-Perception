@@ -163,37 +163,11 @@ export default function App() {
     setStatusText('PROCESSING');
 
     try {
-      // 2. Fetch perception inference with preview points limit
-      let percData = null;
-      const binPath = frame.bin_path || frame.point_cloud_path;
-      const labelPath = frame.label_path || null;
-
-      if (binPath) {
-        try {
-          const res = await api.runInference({
-            binPath,
-            labelPath,
-            numPoints: null,
-            previewPointsLimit: 12000,
-          });
-          percData = res;
-        } catch (err) {
-          addLog(`Backend inference unavailable; using simulation for frame ${frameId}`);
-        }
-      }
-
-      if (!percData || !percData.points) {
-        try {
-          const simBundle = await api.getSimulationFrame(frameId);
-          percData = simBundle.perception;
-          setAdaptiveMap(simBundle.adaptive_map);
-          setUniformMap(simBundle.uniform_map);
-        } catch {
-          const localFrame = generateSimulationFrame(frameId);
-          percData = localFrame;
-          addLog(`Local simulation frame ${frameId} loaded`);
-        }
-      }
+      // Playback stays local so Render CPU inference cannot time out the dashboard.
+      // The deterministic scene preserves the same road, buildings, trees, traffic,
+      // detection data, and frame-to-frame motion without a network request per frame.
+      const percData = generateSimulationFrame(frameId);
+      addLog(`Simulation frame ${frameId} loaded`);
 
       if (percData && percData.points) {
         const rawPoints = percData.points || [];
@@ -373,7 +347,7 @@ export default function App() {
   const currentFrameId = currentFrameObj.frame_id || currentFrameObj.id || '000000';
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#030712] text-slate-100 overflow-hidden font-sans select-none">
+    <div className="flex flex-col h-auto min-h-screen md:h-screen w-screen bg-[#030712] text-slate-100 overflow-y-auto md:overflow-hidden font-sans select-none">
       {/* 1. Header Bar */}
       <Header
         frameId={currentFrameId}
@@ -409,9 +383,9 @@ export default function App() {
       />
 
       {/* 2. Main Multi-Row Grid Container */}
-      <main className="flex-1 flex flex-col p-2 gap-2 overflow-y-auto min-h-0">
+      <main className="flex-1 flex flex-col p-1.5 md:p-2 gap-1.5 md:gap-2 overflow-y-auto min-h-0">
         {/* ROW 1: PRIMARY 3D WORKSPACE (Left Pipeline + Center 3D Viewer + Right Legend & Counts) */}
-        <div className="flex gap-2 h-[410px] min-h-[380px] shrink-0">
+        <div className="flex flex-col md:flex-row gap-1.5 md:gap-2 md:h-[410px] md:min-h-[380px] shrink-0">
           {/* Left Column: Scene Overview, AI Segmentation, 2.5D Mapping */}
           <SceneOverview
             frameId={currentFrameId}
@@ -443,8 +417,8 @@ export default function App() {
           />
 
           {/* Right Column: Semantic Legend + Object Detection + Grid Resolution */}
-          <div className="w-[230px] shrink-0 flex flex-col gap-2">
-            <div className="flex gap-2 flex-1 min-h-0">
+          <div className="w-full md:w-[230px] shrink-0 flex flex-row md:flex-col gap-2 md:gap-2">
+            <div className="flex gap-2 flex-1 min-h-0 w-full">
               <SemanticLegend
                 activeClasses={activeClasses}
                 onToggleClass={handleToggleClass}
@@ -469,14 +443,14 @@ export default function App() {
         </div>
 
         {/* ROW 2: MIDDLE HORIZONTAL VIEWS (Side/Front View + Semantic Map Top View + Elevation Profile) */}
-        <div className="grid grid-cols-3 gap-2 h-[155px] min-h-[145px] shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 md:gap-2 md:h-[155px] md:min-h-[145px] shrink-0">
           <SideFrontElevationView points={points} labels={labels} />
           <SemanticMapTopView points={points} labels={labels} adaptiveMap={adaptiveMap} />
           <ElevationProfileFrontView points={points} />
         </div>
 
         {/* ROW 3: LOWER ANALYTICS (Performance Metrics + System Logs + Grid Comparison) */}
-        <div className="grid grid-cols-3 gap-2 h-[135px] min-h-[125px] shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 md:gap-2 md:h-[135px] md:min-h-[125px] shrink-0">
           <PerformanceMetricsGauges
             totalPoints={totalPoints}
             uniformCells={uniformCellsCount}

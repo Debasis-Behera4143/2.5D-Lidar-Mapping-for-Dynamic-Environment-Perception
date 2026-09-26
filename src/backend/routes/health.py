@@ -3,13 +3,15 @@ System health and readiness diagnostics route.
 
 Provides GET /api/v1/health endpoint reporting PyTorch runtime, CUDA hardware
 status, and semantic segmentation model weights checkpoint availability.
+
+NOTE: torch is imported lazily inside the handler to avoid blocking application
+startup on resource-constrained environments.
 """
 
 import sys
 import time
 from typing import Any, Dict
 from fastapi import APIRouter, status
-import torch
 
 from src.backend.config import API_VERSION, get_checkpoint_path, get_compute_device
 from src.backend.schemas.health import (
@@ -18,7 +20,6 @@ from src.backend.schemas.health import (
     DeviceInfo,
     HealthResponse,
 )
-from src.backend.services.inference_service import InferenceService
 
 router = APIRouter(prefix="/api/v1", tags=["Health"])
 
@@ -30,6 +31,8 @@ def get_health() -> HealthResponse:
     """
     Retrieve service operational health, hardware platform, and model checkpoint state.
     """
+    import torch
+
     device = get_compute_device()
     ckpt_path = get_checkpoint_path()
 
@@ -58,12 +61,11 @@ def get_health() -> HealthResponse:
         cuda_version=cuda_version,
     )
 
-    inference_service = InferenceService()
     checkpoint_status = CheckpointStatus(
         checkpoint_path=str(ckpt_path).replace("\\", "/"),
         exists=ckpt_exists,
         size_bytes=ckpt_size,
-        is_loaded=inference_service.is_loaded(),
+        is_loaded=False,
         model_type="RandLA-Net",
     )
 

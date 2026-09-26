@@ -59,6 +59,12 @@ app.include_router(simulation_router)
 FRONTEND_INDEX = Path(__file__).resolve().parents[2] / "frontend" / "dist" / "index.html"
 
 
+@app.get("/api/v1/ping", status_code=status.HTTP_200_OK)
+def ping() -> Dict[str, str]:
+    """Ultra-lightweight liveness probe (no heavy imports needed)."""
+    return {"status": "ok"}
+
+
 @app.get("/", status_code=status.HTTP_200_OK)
 def root() -> Any:
     """
