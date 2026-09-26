@@ -9,6 +9,7 @@ from typing import Any, Dict
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from src.backend.config import API_DESCRIPTION, API_TITLE, API_VERSION
@@ -81,6 +82,10 @@ def root() -> Any:
             "/redoc",
         ],
     }
+
+
+if FRONTEND_INDEX.parent.is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_INDEX.parent / "assets"), name="frontend-assets")
 
 
 # Global Exception Handlers ensuring no raw stack traces leak to users
