@@ -196,6 +196,7 @@ export function TrackedVehicles({
   detectedObjects = [],
   show = true,
   showBadges = true,
+  frameIndex = 0,
 }) {
   if (!show) return null;
 
@@ -227,7 +228,8 @@ export function TrackedVehicles({
       {vehiclesToRender.map((obj, i) => {
         const posX = -(obj.center?.y || 0);
         const posY = 0.65;
-        const posZ = -(obj.center?.x || 10);
+        const motion = frameIndex * 0.3;
+        const posZ = -(obj.center?.x || 10) - motion;
         const dist = obj.distance_m || Math.sqrt(posX * posX + posZ * posZ);
 
         return (
@@ -591,6 +593,7 @@ export function TrackedPedestrians({
   detectedObjects = [],
   show = true,
   showBadges = true,
+  frameIndex = 0,
 }) {
   if (!show) return null;
 
@@ -613,7 +616,7 @@ export function TrackedPedestrians({
       {pedestriansToRender.map((obj, idx) => {
         const posX = -(obj.center?.y || 4.8);
         const posY = 0.9;
-        const posZ = -(obj.center?.x || 6.5);
+        const posZ = -(obj.center?.x || 6.5) - frameIndex * 0.12;
         const dist = obj.distance_m || Math.sqrt(posX * posX + posZ * posZ);
 
         return (

@@ -15,6 +15,7 @@ function createRng(seed) {
 export function generateSimulationFrame(frameId = '1248') {
   const seed = parseInt(frameId, 10) || 1248;
   const rng = createRng(seed);
+  const motion = (seed % 3) * 2.2;
 
   const points = [];
   const labels = [];
@@ -98,9 +99,9 @@ export function generateSimulationFrame(frameId = '1248') {
   // Far car ahead at X = 32.0m, Y = -1.5m
   // Oncoming car at X = 25.0m, Y = 2.4m
   const vehicleCenters = [
-    [15.5, 0.4, 0.75, 4.4, 1.8, 1.4],
-    [32.0, -1.6, 0.75, 4.2, 1.8, 1.4],
-    [25.0, 2.2, 0.75, 4.0, 1.8, 1.4],
+    [15.5 + motion, 0.4, 0.75, 4.4, 1.8, 1.4],
+    [32.0 + motion * 0.7, -1.6, 0.75, 4.2, 1.8, 1.4],
+    [25.0 - motion * 0.5, 2.2, 0.75, 4.0, 1.8, 1.4],
   ];
 
   vehicleCenters.forEach(([vx, vy, vz, len, wid, ht]) => {
@@ -118,8 +119,8 @@ export function generateSimulationFrame(frameId = '1248') {
   // Pedestrian on right sidewalk at X = 18.0m, Y = 5.2m
   // Pedestrian on left sidewalk at X = 28.0m, Y = -5.0m
   const pedestrians = [
-    [18.0, 5.2],
-    [28.0, -5.0],
+    [18.0 + motion * 0.35, 5.2],
+    [28.0 + motion * 0.2, -5.0],
   ];
 
   pedestrians.forEach(([px, py]) => {
@@ -201,6 +202,25 @@ export function generateSimulationFrame(frameId = '1248') {
     Others: 1,
   };
 
+  const detectedObjects = [
+    ...vehicleCenters.map(([x, y, z, length, width, height], index) => ({
+      id: `vehicle-${index + 1}`,
+      class_id: 4,
+      class_name: 'vehicle',
+      center: { x, y, z },
+      size: { length, width, height },
+      distance_m: Math.sqrt(x * x + y * y),
+    })),
+    ...pedestrians.map(([x, y], index) => ({
+      id: `pedestrian-${index + 1}`,
+      class_id: 5,
+      class_name: 'pedestrian',
+      center: { x, y, z: 0.9 },
+      size: { length: 0.9, width: 0.7, height: 1.8 },
+      distance_m: Math.sqrt(x * x + y * y),
+    })),
+  ];
+
   // 10. Performance Telemetry
   const performance = {
     miou_percent: 87.0,
@@ -265,6 +285,7 @@ export function generateSimulationFrame(frameId = '1248') {
     total_points: points.length,
     annotations,
     scene_objects: sceneObjects,
+    detected_objects: detectedObjects,
     performance,
     system_logs: systemLogs,
     elevation_profile: { distance_m, height_m },

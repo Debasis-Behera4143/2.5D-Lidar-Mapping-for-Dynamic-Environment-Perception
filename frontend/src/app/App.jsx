@@ -23,6 +23,37 @@ import {
 } from '../components/LowerAnalytics';
 import { api } from '../services/api';
 import { CLASS_NAMES } from '../config/constants';
+import { generateSimulationFrame } from '../services/simulationData';
+
+function buildLocalMaps(points, labels, baseResolution, fineResolution, importanceThreshold) {
+  const cells = new Map();
+  const stride = Math.max(1, Math.ceil(points.length / 1800));
+
+  points.forEach((point, index) => {
+    if (index % stride !== 0) return;
+    const x = Array.isArray(point) ? point[0] : point.x || 0;
+    const y = Array.isArray(point) ? point[1] : point.y || 0;
+    const z = Array.isArray(point) ? point[2] : point.z || 0;
+    const label = labels[index] ?? point.predicted_label ?? 7;
+    const dynamic = label === 4 || label === 5;
+    const resolution = dynamic || importanceThreshold < 0.4 ? fineResolution : baseResolution;
+    const cellX = Math.floor(x / resolution);
+    const cellY = Math.floor(y / resolution);
+    const key = `${cellX}:${cellY}`;
+    if (!cells.has(key)) {
+      cells.set(key, {
+        center_x: (cellX + 0.5) * resolution,
+        center_y: (cellY + 0.5) * resolution,
+        mean_height: z,
+        resolution,
+        importance_score: dynamic ? 0.9 : 0.2,
+        level: dynamic ? 'fine' : 'coarse',
+      });
+    }
+  });
+
+  return { cells: Array.from(cells.values()) };
+}
 
 export default function App() {
   // 1. Core State
@@ -53,6 +84,7 @@ export default function App() {
   const [adaptiveMap, setAdaptiveMap] = useState(null);
   const [uniformMap, setUniformMap] = useState(null);
   const [isUpdatingMap, setIsUpdatingMap] = useState(false);
+  const [viewerResetToken, setViewerResetToken] = useState(0);
 
   // 4. Interactive Filters & HUD
   const [activeClasses, setActiveClasses] = useState({
@@ -137,21 +169,30 @@ export default function App() {
       const labelPath = frame.label_path || null;
 
       if (binPath) {
-        const res = await api.runInference({
-          binPath,
-          labelPath,
-          numPoints: null,
-          previewPointsLimit: 12000,
-        });
-        percData = res;
+        try {
+          const res = await api.runInference({
+            binPath,
+            labelPath,
+            numPoints: null,
+            previewPointsLimit: 12000,
+          });
+          percData = res;
+        } catch (err) {
+          addLog(`Backend inference unavailable; using simulation for frame ${frameId}`);
+        }
       }
 
       if (!percData || !percData.points) {
-        // Fallback to deterministic simulation bundle
-        const simBundle = await api.getSimulationFrame(frameId === '000000' ? '1248' : frameId);
-        percData = simBundle.perception;
-        setAdaptiveMap(simBundle.adaptive_map);
-        setUniformMap(simBundle.uniform_map);
+        try {
+          const simBundle = await api.getSimulationFrame(frameId);
+          percData = simBundle.perception;
+          setAdaptiveMap(simBundle.adaptive_map);
+          setUniformMap(simBundle.uniform_map);
+        } catch {
+          const localFrame = generateSimulationFrame(frameId);
+          percData = localFrame;
+          addLog(`Local simulation frame ${frameId} loaded`);
+        }
       }
 
       if (percData && percData.points) {
@@ -207,7 +248,13 @@ export default function App() {
           // ignore
         }
 
+        const localMap = buildLocalMaps(rawPoints, rawLabels, baseResolution, fineResolution, importanceThreshold);
+        if (!adaRes) setAdaptiveMap(localMap);
+        if (!uniRes) setUniformMap({ cell_count: Math.max(1, Math.round(localMap.cells.length * 2.5)) });
+
         // Store into memory cache for instant future retrieval
+        const cachedAdaptiveMap = adaRes || adaptiveMap || buildLocalMaps(rawPoints, rawLabels, baseResolution, fineResolution, importanceThreshold);
+        const cachedUniformMap = uniRes || uniformMap || { cell_count: Math.max(1, Math.round(cachedAdaptiveMap.cells.length * 2.5)) };
         frameCache.current.set(frameId, {
           points: rawPoints,
           labels: rawLabels,
@@ -215,8 +262,8 @@ export default function App() {
           detectedObjects: rawObjects,
           totalPoints: totalPts,
           classCounts: counts,
-          adaptiveMap: adaRes,
-          uniformMap: uniRes,
+          adaptiveMap: cachedAdaptiveMap,
+          uniformMap: cachedUniformMap,
         });
       }
 
@@ -228,7 +275,7 @@ export default function App() {
     } finally {
       isFrameLoading.current = false;
     }
-  }, [availableFrames, baseResolution, fineResolution, importanceThreshold, addLog]);
+  }, [availableFrames, baseResolution, fineResolution, importanceThreshold, addLog, adaptiveMap, uniformMap]);
 
   // Initial and reactive frame loading
   useEffect(() => {
@@ -307,7 +354,10 @@ export default function App() {
         addLog(`Adaptive 2.5D map updated (${adaRes.cells.length} cells generated)`);
       }
     } catch (err) {
-      addLog(`Map update error: ${err.message}`);
+      const localMap = buildLocalMaps(points, labels, baseResolution, fineResolution, importanceThreshold);
+      setAdaptiveMap(localMap);
+      setUniformMap({ cell_count: Math.max(1, Math.round(localMap.cells.length * 2.5)) });
+      addLog(`Local 2.5D map updated (${localMap.cells.length} cells)`);
     } finally {
       setIsUpdatingMap(false);
     }
@@ -332,8 +382,21 @@ export default function App() {
         isLive={true}
         statusText={statusText}
         backendConnected={backendConnected}
-        onResetView={() => addLog('Camera view reset to default')}
-        onExport={() => addLog('Exported 2.5D Map GeoTIFF & JSON data')}
+        onResetView={() => {
+          setViewerResetToken((token) => token + 1);
+          addLog('Camera view reset to default');
+        }}
+        onExport={() => {
+          const exportData = { frame_id: currentFrameId, points, labels, adaptive_map: adaptiveMap, uniform_map: uniformMap };
+          const blob = new Blob([JSON.stringify(exportData)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `lidar-frame-${currentFrameId}.json`;
+          link.click();
+          URL.revokeObjectURL(url);
+          addLog('Exported 2.5D map JSON data');
+        }}
         onStepNext={handleStepNext}
         onStepPrev={handleStepPrev}
         onTogglePlay={handleTogglePlay}
@@ -376,6 +439,7 @@ export default function App() {
             frameIndex={currentFrameIndex}
             baseResolution={baseResolution}
             detectedObjects={detectedObjects}
+            resetToken={viewerResetToken}
           />
 
           {/* Right Column: Semantic Legend + Object Detection + Grid Resolution */}

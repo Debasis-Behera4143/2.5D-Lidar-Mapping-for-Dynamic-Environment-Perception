@@ -451,6 +451,7 @@ export default function MainLidarViewer({
   frameIndex = 0,
   baseResolution = 1.0,
   detectedObjects = [],
+  resetToken = 0,
   onHoverPoint,
   hoveredPoint: propHoveredPoint,
   onClickPoint,
@@ -502,6 +503,10 @@ export default function MainLidarViewer({
       controlsRef.current.target.set(0, 1.5, -20);
     }
   };
+
+  useEffect(() => {
+    if (resetToken > 0) handleResetView();
+  }, [resetToken]);
 
   return (
     <div className="relative flex-1 bg-[#040814] border border-[#14233c] rounded-lg overflow-hidden select-none flex flex-col">
@@ -739,6 +744,7 @@ export default function MainLidarViewer({
             detectedObjects={detectedObjects}
             show={showCars}
             showBadges={showCallouts}
+            frameIndex={frameIndex}
           />
 
           {/* 3D Tracked Pedestrians */}
@@ -746,6 +752,7 @@ export default function MainLidarViewer({
             detectedObjects={detectedObjects}
             show={showCars}
             showBadges={showCallouts}
+            frameIndex={frameIndex}
           />
 
           {/* Real LiDAR Points Buffer (Toggleable on/off) */}
