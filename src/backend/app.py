@@ -8,7 +8,8 @@ with safe global exception handling to prevent leaking internal stack traces.
 from typing import Any, Dict
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from pathlib import Path
 
 from src.backend.config import API_DESCRIPTION, API_TITLE, API_VERSION
 from src.backend.routes.health import router as health_router
@@ -54,12 +55,17 @@ app.include_router(perception_router)
 app.include_router(mapping_router)
 app.include_router(simulation_router)
 
+FRONTEND_INDEX = Path(__file__).resolve().parents[2] / "frontend" / "dist" / "index.html"
+
 
 @app.get("/", status_code=status.HTTP_200_OK)
-def root() -> Dict[str, Any]:
+def root() -> Any:
     """
-    Root endpoint returning service identity, version, and primary API routes.
+    Serve the dashboard at the public service root when the frontend is bundled.
     """
+    if FRONTEND_INDEX.is_file():
+        return FileResponse(FRONTEND_INDEX)
+
     return {
         "message": API_TITLE,
         "version": API_VERSION,

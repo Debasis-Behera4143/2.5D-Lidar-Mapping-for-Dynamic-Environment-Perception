@@ -1,3 +1,11 @@
+FROM node:22-alpine AS frontend-build
+
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm ci --include=dev
+COPY frontend ./
+RUN npm run build
+
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -16,6 +24,7 @@ COPY src ./src
 COPY checkpoints ./checkpoints
 COPY data/sample_kitti ./data/sample_kitti
 COPY data/semantic_kitti ./data/semantic_kitti
+COPY --from=frontend-build /frontend/dist ./frontend/dist
 
 EXPOSE 8000
 
