@@ -344,11 +344,11 @@ function AdaptiveGrid3D({ cells = [], showGrid = true, baseResolution = 1.0 }) {
 /**
  * Ego Vehicle Model (moves forward during playback)
  */
-function EgoVehicle({ position = [0, 0.65, -4], show = true }) {
+function EgoVehicle({ position = [0, 0.65, -4], rotation = [0, 0, 0], show = true }) {
   if (!show) return null;
 
   return (
-    <group position={position}>
+    <group position={position} rotation={rotation}>
       {/* Chassis Body */}
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[1.9, 1.1, 3.8]} />
@@ -392,6 +392,7 @@ function EgoVehicle({ position = [0, 0.65, -4], show = true }) {
 function CameraRig({
   cameraMode = 'orbit',
   egoPos = [0, 0.65, -4],
+  egoYaw = 0,
   controlsRef,
 }) {
   const { camera } = useThree();
@@ -402,39 +403,48 @@ function CameraRig({
 
     if (cameraMode === 'birdEye') {
       // Top-Down Bird's Eye View
-      camera.position.set(0, 52, egoPos[2] - 12);
-      controls.target.set(0, 0, egoPos[2] - 12);
+      camera.position.set(egoPos[0], 52, egoPos[2] - 12);
+      controls.target.set(egoPos[0], 0, egoPos[2] - 12);
       controls.update();
     } else if (cameraMode === 'egoPOV') {
       // Ego Sensor POV looking straight forward
       camera.position.set(egoPos[0], egoPos[1] + 1.2, egoPos[2] + 0.5);
-      controls.target.set(egoPos[0], egoPos[1] + 1.0, egoPos[2] - 25);
+      controls.target.set(egoPos[0] + Math.sin(egoYaw) * 8, egoPos[1] + 1.0, egoPos[2] - 25);
       controls.update();
     } else if (cameraMode === 'sideProfile') {
       // Side Profile
       camera.position.set(28, 6, egoPos[2] - 10);
-      controls.target.set(0, 1.5, egoPos[2] - 10);
+      controls.target.set(egoPos[0], 1.5, egoPos[2] - 10);
       controls.update();
     } else if (cameraMode === 'frontView') {
       // Direct Front View looking back at approaching car
-      camera.position.set(0, 3, egoPos[2] - 30);
-      controls.target.set(0, 1.2, egoPos[2]);
+      camera.position.set(egoPos[0], 3, egoPos[2] - 30);
+      controls.target.set(egoPos[0], 1.2, egoPos[2]);
       controls.update();
     } else if (cameraMode === 'orbit') {
       // Default 3D Orbit View
-      camera.position.set(0, 15, egoPos[2] + 18);
-      controls.target.set(0, 1.2, egoPos[2] - 14);
+      camera.position.set(egoPos[0], 15, egoPos[2] + 18);
+      controls.target.set(egoPos[0], 1.2, egoPos[2] - 14);
       controls.update();
     }
   }, [cameraMode, camera, controlsRef]);
 
   // Smoothly follow the moving vehicle during playback when in Ego POV or Orbit
   useFrame(() => {
-    if (cameraMode === 'egoPOV' && controlsRef.current) {
+    if (controlsRef.current) {
       const controls = controlsRef.current;
-      camera.position.set(egoPos[0], egoPos[1] + 1.2, egoPos[2] + 0.5);
-      controls.target.set(egoPos[0], egoPos[1] + 1.0, egoPos[2] - 25);
-      controls.update();
+      if (cameraMode === 'egoPOV') {
+        camera.position.set(egoPos[0], egoPos[1] + 1.2, egoPos[2] + 0.5);
+        controls.target.set(egoPos[0] + Math.sin(egoYaw) * 8, egoPos[1] + 1.0, egoPos[2] - 25);
+        controls.update();
+      } else if (cameraMode === 'orbit') {
+        // Smoothly track the car along X and Z so it stays centered as it drives and lane-changes
+        controls.target.x = THREE.MathUtils.lerp(controls.target.x, egoPos[0], 0.08);
+        controls.target.z = THREE.MathUtils.lerp(controls.target.z, egoPos[2] - 14, 0.08);
+        camera.position.x = THREE.MathUtils.lerp(camera.position.x, egoPos[0], 0.08);
+        camera.position.z = THREE.MathUtils.lerp(camera.position.z, egoPos[2] + 18, 0.08);
+        controls.update();
+      }
     }
   });
 
@@ -456,6 +466,11 @@ export default function MainLidarViewer({
   hoveredPoint: propHoveredPoint,
   onClickPoint,
   selectedPoint: propSelectedPoint,
+  showGrid: propShowGrid,
+  showBoundingBoxes: propShowBoundingBoxes,
+  showTrajectory: propShowTrajectory,
+  cameraMode: propCameraMode,
+  colorBy = 'Semantic Class',
 }) {
   const controlsRef = useRef();
   const [cameraMode, setCameraMode] = useState('orbit'); // 'orbit' | 'birdEye' | 'egoPOV' | 'sideProfile' | 'frontView'
@@ -469,6 +484,23 @@ export default function MainLidarViewer({
   const [showRadar, setShowRadar] = useState(true);
   const [showLanes, setShowLanes] = useState(true);
   const [showCallouts, setShowCallouts] = useState(true);
+
+  // Sync props from LeftSidebar into 3D viewer state
+  useEffect(() => {
+    if (propShowGrid !== undefined) setShowGrid(propShowGrid);
+  }, [propShowGrid]);
+
+  useEffect(() => {
+    if (propShowBoundingBoxes !== undefined) setShowCars(propShowBoundingBoxes);
+  }, [propShowBoundingBoxes]);
+
+  useEffect(() => {
+    if (propShowTrajectory !== undefined) setShowLanes(propShowTrajectory);
+  }, [propShowTrajectory]);
+
+  useEffect(() => {
+    if (propCameraMode !== undefined) setCameraMode(propCameraMode);
+  }, [propCameraMode]);
 
   // Local state for hover/selected point so mouse movements don't cause root App re-renders
   const [internalHoveredPoint, setInternalHoveredPoint] = useState(null);
@@ -487,8 +519,43 @@ export default function MainLidarViewer({
     if (onClickPoint) onClickPoint(pt);
   };
 
-  // Move the user's ego vehicle forward with the active playback frame.
-  const egoPos = useMemo(() => [0, 0.65, -(frameIndex * 4.0)], [frameIndex]);
+  // Autonomous Collision Avoidance & Overtaking Trajectory:
+  // When approaching TARGET Vehicle-1 (ahead in center lane at Z = -18m, X = 0),
+  // ADAS dynamically steers into the left passing corridor (X = -2.4m),
+  // safely overtakes with wide lateral clearance (zero overlap), and smoothly merges back!
+  const { egoPos, egoYaw } = useMemo(() => {
+    const f = frameIndex % 10;
+    const z = -(f * 4.5);
+    const dist = -z; // 0 to 40.5m
+    let x = 0;
+    let yaw = 0;
+
+    if (dist < 4.0) {
+      // Stage 1: Cruising straight in lane
+      x = 0;
+      yaw = 0;
+    } else if (dist >= 4.0 && dist < 12.0) {
+      // Stage 2: Smooth S-curve lane change into left passing lane (X = -2.4m)
+      const t = (dist - 4.0) / 8.0;
+      x = -2.4 * (0.5 - 0.5 * Math.cos(t * Math.PI));
+      yaw = -0.24 * Math.sin(t * Math.PI); // Steering left
+    } else if (dist >= 12.0 && dist < 24.0) {
+      // Stage 3: Safely overtaking Target 1 (obstacle at Z = -18m, X = 0) with 2.4m lateral clearance!
+      x = -2.4;
+      yaw = 0.0;
+    } else if (dist >= 24.0 && dist < 32.0) {
+      // Stage 4: Smooth merge back to center lane after passing
+      const t = (dist - 24.0) / 8.0;
+      x = -2.4 * (0.5 + 0.5 * Math.cos(t * Math.PI));
+      yaw = 0.24 * Math.sin(t * Math.PI); // Steering back right
+    } else {
+      // Stage 5: Continuing forward along center corridor
+      x = 0;
+      yaw = 0;
+    }
+
+    return { egoPos: [x, 0.65, z], egoYaw: yaw };
+  }, [frameIndex]);
 
   const handleResetView = () => {
     setCameraMode('orbit');
@@ -509,7 +576,7 @@ export default function MainLidarViewer({
   }, [resetToken]);
 
   return (
-    <div className="relative flex-1 bg-[#040814] border border-[#14233c] rounded-lg overflow-hidden select-none flex flex-col h-[280px] md:h-auto min-h-[250px] md:min-h-0">
+    <div className="relative isolate z-0 w-full h-full bg-[#040814] border border-[#14233c] rounded-lg overflow-hidden select-none flex flex-col min-h-[380px]">
       {/* Top Header & Floating Toolbar */}
       <div className="absolute top-2 left-2 right-2 md:top-2 md:left-3 md:right-3 z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-0 pointer-events-none">
         <div className="text-[10px] md:text-xs font-bold text-white tracking-tight flex items-center gap-2 bg-[#050b18]/85 px-2 py-1 rounded border border-[#162744] backdrop-blur-sm pointer-events-auto">
@@ -718,6 +785,7 @@ export default function MainLidarViewer({
           <CameraRig
             cameraMode={cameraMode}
             egoPos={egoPos}
+            egoYaw={egoYaw}
             controlsRef={controlsRef}
           />
 
@@ -777,8 +845,8 @@ export default function MainLidarViewer({
             baseResolution={baseResolution}
           />
 
-          {/* Ego Vehicle (at origin of sensor coordinate system) */}
-          <EgoVehicle position={egoPos} show={showEgo} />
+          {/* Ego Vehicle (at origin of sensor coordinate system with steering yaw) */}
+          <EgoVehicle position={egoPos} rotation={[0, egoYaw, 0]} show={showEgo} />
         </Canvas>
       </div>
 

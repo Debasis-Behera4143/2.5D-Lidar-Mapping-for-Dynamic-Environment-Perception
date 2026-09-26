@@ -228,8 +228,7 @@ export function TrackedVehicles({
       {vehiclesToRender.map((obj, i) => {
         const posX = -(obj.center?.y || 0);
         const posY = 0.65;
-        const motion = frameIndex * 0.3;
-        const posZ = -(obj.center?.x || 10) - motion;
+        const posZ = -(obj.center?.x || (18 + i * 16));
         const dist = obj.distance_m || Math.sqrt(posX * posX + posZ * posZ);
 
         return (
@@ -510,10 +509,10 @@ export function AdasRadarWavesAndLanes({
 
       {/* --- Highway Drivable Lane Ribbon & Roadway --- */}
       {showLanes && (
-        <group position={[egoX, 0.01, egoZ]}>
-          {/* Smooth Dark Roadbed Plane (Length 80m, Width 8.4m) */}
+        <group position={[0, 0.01, egoZ]}>
+          {/* Smooth Dark Roadbed Plane (Length 90m, Width 8.8m) centered on roadway */}
           <mesh position={[0, -0.015, -15]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[8.4, 90]} />
+            <planeGeometry args={[8.8, 100]} />
             <meshStandardMaterial
               color="#060c18"
               roughness={0.9}
@@ -521,65 +520,84 @@ export function AdasRadarWavesAndLanes({
             />
           </mesh>
 
-          {/* Active Ego Vehicle Drivable Corridor (Glowing Cyan Ribbon) */}
-          <mesh position={[0, 0.005, -20]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[3.6, 50]} />
-            <meshBasicMaterial
-              color="#00d2ff"
-              transparent
-              opacity={0.12}
-            />
-          </mesh>
-
-          {/* Left Lane Boundary (Solid White/Cyan Line at X = -1.8m) */}
-          <lineSegments>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                args={[new Float32Array([-1.8, 0.01, 15, -1.8, 0.01, -55]), 3]}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial color="#38bdf8" transparent opacity={0.7} />
-          </lineSegments>
-
-          {/* Right Lane Boundary (Solid White/Cyan Line at X = +1.8m) */}
-          <lineSegments>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                args={[new Float32Array([1.8, 0.01, 15, 1.8, 0.01, -55]), 3]}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial color="#38bdf8" transparent opacity={0.7} />
-          </lineSegments>
-
-          {/* Outer Road Edge Curbs (Solid Lines at X = -4.2m and X = +4.2m) */}
-          <lineSegments>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                args={[new Float32Array([-4.2, 0.02, 20, -4.2, 0.02, -65]), 3]}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial color="#94a3b8" transparent opacity={0.5} />
-          </lineSegments>
-          <lineSegments>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                args={[new Float32Array([4.2, 0.02, 20, 4.2, 0.02, -65]), 3]}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial color="#94a3b8" transparent opacity={0.5} />
-          </lineSegments>
-
-          {/* Center Dashed Guidance Line Ahead in Ego Lane */}
-          {[-5, -12, -19, -26, -33, -40, -47].map((zVal, idx) => (
-            <mesh key={idx} position={[0, 0.01, zVal]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.18, 3.2]} />
-              <meshBasicMaterial color="#00e5ff" transparent opacity={0.8} />
+          {/* Road Surface Center Dividing Line (Dashed White/Amber at X = 0) */}
+          {[-6, -14, -22, -30, -38, -46, -54, -62].map((zVal, idx) => (
+            <mesh key={`center-dash-${idx}`} position={[0, 0.008, zVal]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[0.16, 3.5]} />
+              <meshBasicMaterial color="#fcd34d" transparent opacity={0.65} />
             </mesh>
           ))}
+
+          {/* Left Passing Lane Center (X = -2.2m) Dashed Guide */}
+          {[-6, -14, -22, -30, -38, -46, -54, -62].map((zVal, idx) => (
+            <mesh key={`left-dash-${idx}`} position={[-2.2, 0.006, zVal]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[0.12, 2.5]} />
+              <meshBasicMaterial color="#38bdf8" transparent opacity={0.4} />
+            </mesh>
+          ))}
+
+          {/* Right Cruising Lane Center (X = +2.2m) Dashed Guide */}
+          {[-6, -14, -22, -30, -38, -46, -54, -62].map((zVal, idx) => (
+            <mesh key={`right-dash-${idx}`} position={[2.2, 0.006, zVal]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[0.12, 2.5]} />
+              <meshBasicMaterial color="#38bdf8" transparent opacity={0.4} />
+            </mesh>
+          ))}
+
+          {/* Left Highway Curb / Verge Barrier (X = -4.2m) */}
+          <lineSegments>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                args={[new Float32Array([-4.2, 0.02, 25, -4.2, 0.02, -75]), 3]}
+              />
+            </bufferGeometry>
+            <lineBasicMaterial color="#38bdf8" transparent opacity={0.7} />
+          </lineSegments>
+
+          {/* Right Highway Curb / Verge Barrier (X = +4.2m) */}
+          <lineSegments>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                args={[new Float32Array([4.2, 0.02, 25, 4.2, 0.02, -75]), 3]}
+              />
+            </bufferGeometry>
+            <lineBasicMaterial color="#38bdf8" transparent opacity={0.7} />
+          </lineSegments>
+        </group>
+      )}
+
+      {/* --- Active Ego Dynamic Avoidance Trajectory Ribbon --- */}
+      {showLanes && (
+        <group>
+          {/* Planned Autonomous Avoidance Path Markers (Glowing S-curve on road) */}
+          {Array.from({ length: 45 }, (_, idx) => {
+            const z = -(idx * 1.0);
+            const dist = -z;
+            let px = 0;
+            if (dist >= 4.0 && dist < 12.0) {
+              const t = (dist - 4.0) / 8.0;
+              px = -2.4 * (0.5 - 0.5 * Math.cos(t * Math.PI));
+            } else if (dist >= 12.0 && dist < 24.0) {
+              px = -2.4;
+            } else if (dist >= 24.0 && dist < 32.0) {
+              const t = (dist - 24.0) / 8.0;
+              px = -2.4 * (0.5 + 0.5 * Math.cos(t * Math.PI));
+            } else {
+              px = 0;
+            }
+            return (
+              <mesh key={`path-${idx}`} position={[px, 0.02, z]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.22, 0.65]} />
+                <meshBasicMaterial
+                  color={dist >= 8.0 && dist <= 24.0 ? '#10b981' : '#00e5ff'}
+                  transparent
+                  opacity={0.75}
+                />
+              </mesh>
+            );
+          })}
         </group>
       )}
     </group>

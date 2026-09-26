@@ -95,13 +95,13 @@ export function generateSimulationFrame(frameId = '1248') {
   });
 
   // 5. Dynamic Vehicles (Class 4: Magenta, #d946ef)
-  // Leading car ahead at X = 15.5m, Y = 0.4m
-  // Far car ahead at X = 32.0m, Y = -1.5m
-  // Oncoming car at X = 25.0m, Y = 2.4m
+  // Target vehicle 1: ahead in center lane at X = 18.0m, Y = 0.0m (obstacle to overtake)
+  // Far car ahead in left lane at X = 48.0m, Y = 2.4m
+  // Far oncoming car in right lane at X = 58.0m, Y = -2.4m
   const vehicleCenters = [
-    [15.5 + motion, 0.4, 0.75, 4.4, 1.8, 1.4],
-    [32.0 + motion * 0.7, -1.6, 0.75, 4.2, 1.8, 1.4],
-    [25.0 - motion * 0.5, 2.2, 0.75, 4.0, 1.8, 1.4],
+    [18.0, 0.0, 0.75, 4.5, 1.8, 1.4],
+    [48.0, 2.4, 0.75, 4.4, 1.8, 1.4],
+    [58.0, -2.4, 0.75, 4.2, 1.8, 1.4],
   ];
 
   vehicleCenters.forEach(([vx, vy, vz, len, wid, ht]) => {

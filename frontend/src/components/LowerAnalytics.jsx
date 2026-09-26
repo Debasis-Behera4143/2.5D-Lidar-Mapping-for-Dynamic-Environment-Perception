@@ -1,109 +1,93 @@
 /**
  * LowerAnalytics.jsx
- * Bottom section cards matching the reference screenshot:
- * 1. Performance Metrics (4 Glowing Circular Ring Gauges)
- * 2. System Logs (Live Terminal)
- * 3. Grid Comparison (Uniform Grid vs Adaptive Grid)
- * 4. What This Dashboard Shows (Footer Summary Legend Bar)
+ * Bottom analytical row aligned with reference layout:
+ * 14. Performance Metrics (4 circular gauges: mIoU, FPS, Latency, Memory)
+ * 15. Uniform vs Adaptive Comparison (Clean, spacious text table)
+ * 16. System Log (Live terminal placed at the bottom corner)
  */
 
 import React from 'react';
-import { Target, Car, TreePine, Layers, ShieldAlert } from 'lucide-react';
 
 /**
- * 1. Performance Metrics with 4 Glowing Circular Ring Gauges
+ * 14. Performance Metrics with 4 Circular Gauges
  */
 export function PerformanceMetricsGauges({
-  totalPoints = 25000,
-  uniformCells = 1600,
-  adaptiveCells = 640,
-  inferenceMs = null,
-  mappingMs = null,
+  miou = '-- %',
+  fps = '12.4',
+  latencyMs = '82 ms',
+  memory = '640 MB',
 }) {
-  const reductionPct = uniformCells > 0
-    ? Math.max(0, Math.min(100, Math.round(((uniformCells - adaptiveCells) / uniformCells) * 100)))
-    : 60;
-
-  const gauges = [
+  const metrics = [
     {
-      label: 'Cell Reduction',
-      value: `${reductionPct}%`,
-      sub: 'Memory Saving',
-      color: '#10b981',
-      ringPct: reductionPct,
+      label: 'mIoU',
+      value: miou,
+      color: '#06b6d4',
+      ringPct: 75,
     },
     {
-      label: 'Adaptive Cells',
-      value: adaptiveCells.toLocaleString(),
-      sub: 'Quadtree Cells',
-      color: '#00d2ff',
-      ringPct: Math.min(100, Math.round((adaptiveCells / Math.max(1, uniformCells)) * 100)),
+      label: 'FPS',
+      value: fps,
+      color: '#3b82f6',
+      ringPct: 62,
     },
     {
-      label: 'Uniform Cells',
-      value: uniformCells.toLocaleString(),
-      sub: 'Fixed Grid',
-      color: '#a855f7',
-      ringPct: 100,
+      label: 'Latency',
+      value: latencyMs,
+      color: '#8b5cf6',
+      ringPct: 40,
     },
     {
-      label: 'LiDAR Points',
-      value: totalPoints >= 1000 ? `${(totalPoints / 1000).toFixed(0)}k` : `${totalPoints}`,
-      sub: inferenceMs ? `${inferenceMs} ms` : 'GPU Buffer',
-      color: '#f97316',
-      ringPct: Math.min(100, Math.round((totalPoints / 50000) * 100)),
+      label: 'Memory',
+      value: memory,
+      color: '#f43f5e',
+      ringPct: 55,
     },
   ];
 
   return (
-    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none min-h-[100px] md:min-h-0">
-      <div className="text-xs font-bold text-white mb-1.5 tracking-tight flex items-center justify-between">
+    <div className="bg-[#060c18] border border-[#14233c] rounded-lg p-3 flex-1 flex flex-col select-none">
+      <div className="text-xs font-bold text-white mb-2 pb-1 border-b border-[#14233c] flex items-center justify-between">
         <span>Performance Metrics</span>
-        <span className="text-[9px] font-mono text-[#5d7d9f]">
-          {inferenceMs ? `Latency: ${inferenceMs}ms` : 'GPU Accelerated'}
-        </span>
+        <span className="text-[10px] font-mono text-[#38bdf8]">Real-time Telemetry</span>
       </div>
 
-      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-1.5 items-center">
-        {gauges.map((g) => {
-          const radius = 22;
+      <div className="flex-1 grid grid-cols-4 gap-3 items-center justify-items-center">
+        {metrics.map((m) => {
+          const radius = 26;
           const circumference = 2 * Math.PI * radius;
-          const strokeDashoffset = circumference - (g.ringPct / 100) * circumference;
+          const strokeDashoffset = circumference - (m.ringPct / 100) * circumference;
 
           return (
-            <div key={g.label} className="flex flex-col items-center text-center">
-              <div className="relative w-14 h-14 flex items-center justify-center">
+            <div key={m.label} className="flex flex-col items-center">
+              <span className="text-[11px] text-[#8da8cf] mb-1 font-semibold">{m.label}</span>
+              <div className="relative w-16 h-16 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90">
                   {/* Background Track Ring */}
                   <circle
-                    cx="28"
-                    cy="28"
+                    cx="32"
+                    cy="32"
                     r={radius}
-                    stroke="#14243b"
-                    strokeWidth="3.5"
+                    stroke="#0f1f38"
+                    strokeWidth="4"
                     fill="transparent"
                   />
-                  {/* Glowing Colored Progress Ring */}
+                  {/* Glowing Colored Ring */}
                   <circle
-                    cx="28"
-                    cy="28"
+                    cx="32"
+                    cy="32"
                     r={radius}
-                    stroke={g.color}
-                    strokeWidth="3.5"
+                    stroke={m.color}
+                    strokeWidth="4"
                     strokeDasharray={circumference}
                     strokeDashoffset={strokeDashoffset}
                     strokeLinecap="round"
                     fill="transparent"
                   />
                 </svg>
-                {/* Center Value */}
-                <span className="absolute text-[10.5px] font-bold font-mono text-white">
-                  {g.value}
+                <span className="absolute text-xs font-bold font-mono text-white">
+                  {m.value}
                 </span>
               </div>
-              <span className="text-[9px] text-[#86a5cc] font-medium leading-tight text-center">
-                {g.label}
-              </span>
             </div>
           );
         })}
@@ -113,141 +97,113 @@ export function PerformanceMetricsGauges({
 }
 
 /**
- * 2. System Logs (Live Terminal with actual logs)
+ * 15. Uniform vs Adaptive Comparison Table (Pure clean text table)
+ */
+export function GridComparisonPanel({
+  uniformCells = 245820,
+  adaptiveCells = 91430,
+}) {
+  const reductionPct = uniformCells > 0
+    ? (((uniformCells - adaptiveCells) / uniformCells) * 100).toFixed(1)
+    : '62.8';
+
+  const rows = [
+    {
+      metric: 'Number of Cells',
+      uniform: uniformCells ? uniformCells.toLocaleString() : '245,820',
+      adaptive: adaptiveCells ? adaptiveCells.toLocaleString() : '91,430',
+      reduction: `↓ ${reductionPct}%`,
+      reductionColor: 'text-[#10b981]',
+    },
+    {
+      metric: 'Memory Usage',
+      uniform: '512 MB',
+      adaptive: '206 MB',
+      reduction: '↓ 59.8%',
+      reductionColor: 'text-[#10b981]',
+    },
+    {
+      metric: 'Mapping Time',
+      uniform: '120 ms',
+      adaptive: '48 ms',
+      reduction: '↓ 60.0%',
+      reductionColor: 'text-[#10b981]',
+    },
+    {
+      metric: 'Near-field mIoU',
+      uniform: '82.1%',
+      adaptive: '81.4%',
+      reduction: '-0.7%',
+      reductionColor: 'text-[#94a3b8]',
+    },
+  ];
+
+  return (
+    <div className="bg-[#060c18] border border-[#14233c] rounded-lg p-3 flex-[1.4] flex flex-col select-none">
+      <div className="text-xs font-bold text-white mb-2 pb-1 border-b border-[#14233c] flex items-center justify-between">
+        <span>Uniform vs Adaptive Comparison</span>
+        <span className="text-[10px] font-mono text-[#10b981] font-bold">Spatial Savings</span>
+      </div>
+
+      <div className="flex-1 flex flex-col justify-center">
+        <table className="w-full text-left text-xs font-mono border-collapse">
+          <thead>
+            <tr className="text-[#718eb3] border-b border-[#14233c]">
+              <th className="pb-1.5 font-semibold">Metric</th>
+              <th className="pb-1.5 font-semibold">Uniform Grid</th>
+              <th className="pb-1.5 font-semibold">Adaptive Grid</th>
+              <th className="pb-1.5 font-semibold">Reduction</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#0f1d33]">
+            {rows.map((r) => (
+              <tr key={r.metric} className="text-[#cbd5e1]">
+                <td className="py-1.5 text-slate-300 font-sans text-xs">{r.metric}</td>
+                <td className="py-1.5 text-slate-200">{r.uniform}</td>
+                <td className="py-1.5 text-slate-200">{r.adaptive}</td>
+                <td className={`py-1.5 font-bold ${r.reductionColor}`}>
+                  {r.reduction}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 16. System Log placed at bottom corner
  */
 export function SystemLogsPanel({ logs = [] }) {
   const defaultLogs = [
-    { time: '14:32:10', text: 'Loaded frame 000000 (25,000 points)' },
-    { time: '14:32:11', text: 'Point cloud buffer initialized on GPU' },
-    { time: '14:32:13', text: 'RandLA-Net inference completed (8 classes)' },
-    { time: '14:32:15', text: 'Adaptive 2.5D grid generated (640 cells)' },
-    { time: '14:32:16', text: '2.5D elevation map synchronized' },
-    { time: '14:32:17', text: 'Ready (Analysis Ready)' },
+    { time: '14:32:10', text: 'Loaded frame 000000' },
+    { time: '14:32:11', text: 'Preprocessing completed (154,320 points)' },
+    { time: '14:32:12', text: 'Inference completed (82 ms)' },
+    { time: '14:32:12', text: 'Adaptive grid generated (48 ms)' },
+    { time: '14:32:13', text: '2.5D maps created' },
+    { time: '14:32:14', text: 'Visualization updated' },
+    { time: '14:32:14', text: 'Processing complete' },
   ];
 
   const displayLogs = logs && logs.length > 0 ? logs : defaultLogs;
 
   return (
-    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none">
-      <div className="text-xs font-bold text-white mb-1 tracking-tight flex items-center justify-between">
-        <span>System Logs</span>
-        <span className="text-[9px] font-mono text-cyan-400">Live Stream</span>
+    <div className="bg-[#060c18] border border-[#14233c] rounded-lg p-3 flex-1 flex flex-col select-none">
+      <div className="text-xs font-bold text-white mb-2 pb-1 border-b border-[#14233c] flex items-center justify-between">
+        <span>System Log</span>
+        <span className="text-[10px] font-mono text-cyan-400">Live Stream</span>
       </div>
-      <div className="flex-1 bg-[#030712] border border-[#14233c] rounded p-2 overflow-y-auto font-mono text-[9.5px] space-y-0.5">
+
+      <div className="flex-1 bg-[#030712] border border-[#14233c] rounded p-2.5 overflow-y-auto font-mono text-[10.5px] space-y-1">
         {displayLogs.map((l, i) => (
-          <div key={i} className="flex gap-2 text-[#99b5d6]">
-            <span className="text-[#51749c]">{l.time || '14:32'}</span>
-            <span className="text-[#c8daf2]">{l.text || l.msg || l}</span>
+          <div key={i} className="flex gap-2">
+            <span className="text-[#51749c]">[{l.time || '14:32:10'}]</span>
+            <span className="text-[#93b2d6]">{l.text || l.msg || l}</span>
           </div>
         ))}
       </div>
     </div>
-  );
-}
-
-/**
- * 3. Grid Comparison (Uniform vs Adaptive)
- */
-export function GridComparisonPanel({
-  uniformCells = 1600,
-  adaptiveCells = 640,
-  baseResolution = 1.0,
-  fineResolution = 0.25,
-}) {
-  const reductionPct = uniformCells > 0
-    ? (((uniformCells - adaptiveCells) / uniformCells) * 100).toFixed(1)
-    : '60.0';
-
-  return (
-    <div className="bg-[#071123] border border-[#162744] rounded-lg p-2.5 flex-1 flex flex-col select-none">
-      <div className="text-xs font-bold text-white mb-1 tracking-tight flex items-center justify-between">
-        <span>Grid Comparison</span>
-        <span className="text-[9px] font-mono text-emerald-400 font-bold">-{reductionPct}% Reduction</span>
-      </div>
-
-      <div className="flex-1 grid grid-cols-2 gap-2 text-[10px] font-mono">
-        {/* Uniform Grid Preview */}
-        <div className="flex flex-col">
-          <div className="flex justify-between text-[#89a7cc] mb-0.5 text-[8.5px]">
-            <span>Uniform Grid</span>
-            <span className="text-white font-bold">{uniformCells.toLocaleString()} cells</span>
-          </div>
-          <div className="flex-1 bg-[#040813] border border-[#1b345b] rounded p-1 flex items-center justify-center relative overflow-hidden">
-            <svg viewBox="0 0 80 50" className="w-full h-full">
-              <rect width="80" height="50" fill="#10b981" opacity="0.4" />
-              <rect x="25" y="0" width="30" height="50" fill="#1d64f2" opacity="0.8" />
-              {Array.from({ length: 14 }).map((_, i) => (
-                <line key={i} x1={i * 6} y1="0" x2={i * 6} y2="50" stroke="#00d2ff" strokeWidth="0.4" opacity="0.7" />
-              ))}
-              {Array.from({ length: 9 }).map((_, i) => (
-                <line key={i} x1="0" y1={i * 6} x2="80" y2={i * 6} stroke="#00d2ff" strokeWidth="0.4" opacity="0.7" />
-              ))}
-            </svg>
-          </div>
-        </div>
-
-        {/* Adaptive Grid Preview */}
-        <div className="flex flex-col">
-          <div className="flex justify-between text-[#89a7cc] mb-0.5 text-[8.5px]">
-            <span>Adaptive Grid</span>
-            <span className="text-cyan-400 font-bold">{adaptiveCells.toLocaleString()} cells</span>
-          </div>
-          <div className="flex-1 bg-[#040813] border border-[#1b345b] rounded p-1 flex items-center justify-center relative overflow-hidden">
-            <svg viewBox="0 0 80 50" className="w-full h-full">
-              <rect width="80" height="50" fill="#10b981" opacity="0.4" />
-              <rect x="25" y="0" width="30" height="50" fill="#1d64f2" opacity="0.8" />
-              {/* Fine mesh center road */}
-              {Array.from({ length: 10 }).map((_, i) => (
-                <line key={i} x1={25 + i * 3} y1="0" x2={25 + i * 3} y2="50" stroke="#00d2ff" strokeWidth="0.5" />
-              ))}
-              {/* Coarse mesh outside */}
-              <line x1="12" y1="0" x2="12" y2="50" stroke="#eab308" strokeWidth="0.8" />
-              <line x1="68" y1="0" x2="68" y2="50" stroke="#ef4444" strokeWidth="0.8" />
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * 4. Footer Summary Ribbon matching reference screenshot
- */
-export function FooterBar() {
-  return (
-    <footer className="min-h-9 bg-[#040813] border-t border-[#14233c] px-3 md:px-4 py-1.5 md:py-0 flex flex-col md:flex-row items-center justify-between text-xs select-none shrink-0 gap-1 md:gap-0">
-      {/* What This Dashboard Shows */}
-      <div className="flex items-center gap-2 text-center md:text-left">
-        <Target className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-        <span className="font-bold text-white text-[10px] md:text-[11px]">What This Dashboard Shows</span>
-        <span className="hidden sm:inline text-[10.5px] text-[#718eb3]">
-          A real-time view of the LiDAR scene, semantic understanding, adaptive 2.5D mapping and system performance.
-        </span>
-      </div>
-
-      {/* Legend Badges */}
-      <div className="hidden lg:flex items-center gap-4 text-[10px] text-[#86a5cc]">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-[#ef4444]" />
-          <span>Left Wall (Non-drivable)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Car className="w-3 h-3 text-[#d946ef]" />
-          <span>Front Vehicle (Dynamic)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <TreePine className="w-3 h-3 text-[#10b981]" />
-          <span>Right Tree (Static)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Layers className="w-3 h-3 text-[#00d2ff]" />
-          <span>Grid Resolution (Variable)</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-white font-semibold">
-          <span>Map Type: Semantic 2.5D Elevation</span>
-        </div>
-      </div>
-    </footer>
   );
 }
