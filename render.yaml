@@ -16,7 +16,7 @@ services:
   - type: web
     name: lidar-adaptive-mapping-dashboard
     runtime: static
-    buildCommand: cd frontend && npm ci && npm run build
+    buildCommand: cd frontend && npm ci --include=dev && npm run build
     staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL

@@ -6,12 +6,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.0.0"
+
+COPY requirements-render.txt .
+RUN pip install -r requirements-render.txt
 
 COPY src ./src
 COPY checkpoints ./checkpoints
-COPY data ./data
+COPY data/sample_kitti ./data/sample_kitti
+COPY data/semantic_kitti ./data/semantic_kitti
 
 EXPOSE 8000
 
