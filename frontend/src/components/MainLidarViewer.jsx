@@ -487,8 +487,8 @@ export default function MainLidarViewer({
     if (onClickPoint) onClickPoint(pt);
   };
 
-  // Ego vehicle position Progression: Centered at the LiDAR sensor origin (0, 0.65, 0)
-  const egoPos = useMemo(() => [0, 0.65, 0], []);
+  // Move the user's ego vehicle forward with the active playback frame.
+  const egoPos = useMemo(() => [0, 0.65, -(frameIndex * 4.0)], [frameIndex]);
 
   const handleResetView = () => {
     setCameraMode('orbit');
