@@ -20,7 +20,7 @@ services:
     staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://lidar-adaptive-mapping-api.onrender.com
+        value: https://two-5d-lidar-mapping-for-dynamic.onrender.com
     routes:
       - type: rewrite
         source: /*
